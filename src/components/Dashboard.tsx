@@ -122,26 +122,25 @@ const Dashboard = () => {
           </CardContent>
         </Card>
 
-        {/* IA Assistant */}
+        {/* RAG Chat IA */}
         <Card className="shadow-soft">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Bot className="h-5 w-5 text-accent" />
-              Assistente IA
+              RAG Assistant IA
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               <div className="p-4 rounded-lg bg-gradient-success text-white">
-                <p className="text-sm font-medium mb-2">Dica do Dia</p>
+                <p className="text-sm font-medium mb-2">🤖 RAG + CRM Ativo</p>
                 <p className="text-sm text-white/90">
-                  Seus prospects respondem melhor a emails enviados entre 10h-12h. 
-                  Que tal agendar sua próxima campanha neste horário?
+                  Chat inteligente com acesso à base de conhecimento e integração Salesforce para automação completa.
                 </p>
               </div>
               <Button className="w-full" variant="outline">
                 <MessageSquare className="h-4 w-4 mr-2" />
-                Conversar com IA
+                Abrir Chat RAG
               </Button>
             </div>
           </CardContent>
