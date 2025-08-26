@@ -7,13 +7,209 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.12 (cd3cf9e)"
   }
   public: {
     Tables: {
+      contacts: {
+        Row: {
+          cargo: string | null
+          created_at: string
+          email: string | null
+          empresa: string | null
+          id: string
+          nome: string
+          observacoes: string | null
+          status: string | null
+          telefone: string | null
+          updated_at: string
+          user_id: string
+          website: string | null
+        }
+        Insert: {
+          cargo?: string | null
+          created_at?: string
+          email?: string | null
+          empresa?: string | null
+          id?: string
+          nome: string
+          observacoes?: string | null
+          status?: string | null
+          telefone?: string | null
+          updated_at?: string
+          user_id: string
+          website?: string | null
+        }
+        Update: {
+          cargo?: string | null
+          created_at?: string
+          email?: string | null
+          empresa?: string | null
+          id?: string
+          nome?: string
+          observacoes?: string | null
+          status?: string | null
+          telefone?: string | null
+          updated_at?: string
+          user_id?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
+      interactions: {
+        Row: {
+          assunto: string | null
+          contact_id: string | null
+          created_at: string
+          data_interacao: string | null
+          descricao: string | null
+          id: string
+          proximo_followup: string | null
+          tipo: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          assunto?: string | null
+          contact_id?: string | null
+          created_at?: string
+          data_interacao?: string | null
+          descricao?: string | null
+          id?: string
+          proximo_followup?: string | null
+          tipo: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          assunto?: string | null
+          contact_id?: string | null
+          created_at?: string
+          data_interacao?: string | null
+          descricao?: string | null
+          id?: string
+          proximo_followup?: string | null
+          tipo?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "interactions_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leads: {
+        Row: {
+          cnae: string | null
+          contato_decisor: string | null
+          created_at: string
+          email: string | null
+          empresa: string
+          gancho_prospeccao: string | null
+          id: string
+          regime_tributario: string | null
+          setor: string | null
+          status: string | null
+          telefone: string | null
+          updated_at: string
+          user_id: string
+          website: string | null
+        }
+        Insert: {
+          cnae?: string | null
+          contato_decisor?: string | null
+          created_at?: string
+          email?: string | null
+          empresa: string
+          gancho_prospeccao?: string | null
+          id?: string
+          regime_tributario?: string | null
+          setor?: string | null
+          status?: string | null
+          telefone?: string | null
+          updated_at?: string
+          user_id: string
+          website?: string | null
+        }
+        Update: {
+          cnae?: string | null
+          contato_decisor?: string | null
+          created_at?: string
+          email?: string | null
+          empresa?: string
+          gancho_prospeccao?: string | null
+          id?: string
+          regime_tributario?: string | null
+          setor?: string | null
+          status?: string | null
+          telefone?: string | null
+          updated_at?: string
+          user_id?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
+      opportunities: {
+        Row: {
+          contato_id: string | null
+          created_at: string
+          data_fechamento_esperada: string | null
+          empresa: string
+          estagio: string | null
+          id: string
+          observacoes: string | null
+          probabilidade: number | null
+          titulo: string
+          updated_at: string
+          user_id: string
+          valor: number | null
+        }
+        Insert: {
+          contato_id?: string | null
+          created_at?: string
+          data_fechamento_esperada?: string | null
+          empresa: string
+          estagio?: string | null
+          id?: string
+          observacoes?: string | null
+          probabilidade?: number | null
+          titulo: string
+          updated_at?: string
+          user_id: string
+          valor?: number | null
+        }
+        Update: {
+          contato_id?: string | null
+          created_at?: string
+          data_fechamento_esperada?: string | null
+          empresa?: string
+          estagio?: string | null
+          id?: string
+          observacoes?: string | null
+          probabilidade?: number | null
+          titulo?: string
+          updated_at?: string
+          user_id?: string
+          valor?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "opportunities_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
