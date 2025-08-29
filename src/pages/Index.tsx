@@ -3,6 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import Header from "@/components/Header";
 import Dashboard from "@/components/Dashboard";
 import RAGChat from "@/components/RAGChat";
+import CRMDashboard from "@/components/CRM/CRMDashboard";
 
 const Index = () => {
   const { user, loading } = useAuth();
@@ -24,6 +25,7 @@ const Index = () => {
       <Header />
       <main className="container mx-auto px-6 py-8 space-y-8">
         <Dashboard />
+        <CRMDashboard />
         <RAGChat />
       </main>
     </div>
