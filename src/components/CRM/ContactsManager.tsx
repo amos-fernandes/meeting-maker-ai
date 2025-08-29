@@ -119,7 +119,11 @@ const ContactsManager = ({ onStatsUpdate }: ContactsManagerProps) => {
         // Criar novo contato
         const { error } = await supabase
           .from('contacts')
-          .insert({ ...data, user_id: user.id });
+          .insert({ 
+            ...data, 
+            user_id: user.id,
+            nome: data.nome || '',
+          });
 
         if (error) throw error;
         toast.success('Contato criado com sucesso!');

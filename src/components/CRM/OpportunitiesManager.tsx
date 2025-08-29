@@ -160,7 +160,11 @@ const OpportunitiesManager = ({ onStatsUpdate }: OpportunitiesManagerProps) => {
         // Criar nova oportunidade
         const { error } = await supabase
           .from('opportunities')
-          .insert(opportunityData);
+          .insert({ 
+            ...opportunityData,
+            empresa: opportunityData.empresa || 'Nova Oportunidade',
+            titulo: opportunityData.titulo || 'Oportunidade',
+          });
 
         if (error) throw error;
         toast.success('Oportunidade criada com sucesso!');

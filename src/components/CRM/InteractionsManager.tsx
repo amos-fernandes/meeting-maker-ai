@@ -163,7 +163,10 @@ const InteractionsManager = ({ onStatsUpdate }: InteractionsManagerProps) => {
         // Criar nova interação
         const { error } = await supabase
           .from('interactions')
-          .insert(interactionData);
+          .insert({ 
+            ...interactionData,
+            tipo: interactionData.tipo || 'ligacao',
+          });
 
         if (error) throw error;
         toast.success('Interação criada com sucesso!');

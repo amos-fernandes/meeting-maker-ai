@@ -2,7 +2,7 @@ import { Target } from '@/data/knowledgeBase';
 
 export interface Lead {
   id?: string;
-  empresa: string;
+  empresa?: string;
   setor?: string;
   cnae?: string;
   regime_tributario?: string;
@@ -17,7 +17,7 @@ export interface Lead {
 
 export interface Contact {
   id?: string;
-  nome: string;
+  nome?: string;
   empresa?: string;
   cargo?: string;
   email?: string;
@@ -30,8 +30,8 @@ export interface Contact {
 
 export interface Opportunity {
   id?: string;
-  titulo: string;
-  empresa: string;
+  titulo?: string;
+  empresa?: string;
   valor?: number;
   probabilidade?: number;
   estagio?: string;
@@ -78,7 +78,13 @@ export function exportLeadsToCSV(leads: Lead[]): void {
     'telefone', 'email', 'website', 'gancho_prospeccao', 'status'
   ];
   
-  const csvContent = convertToCSV(leads, headers);
+  // Garantir que todos os leads tenham pelo menos uma empresa
+  const sanitizedLeads = leads.map(lead => ({
+    ...lead,
+    empresa: lead.empresa || 'Empresa não informada'
+  }));
+  
+  const csvContent = convertToCSV(sanitizedLeads, headers);
   const filename = `leads_${new Date().toISOString().split('T')[0]}.csv`;
   downloadCSV(csvContent, filename);
 }
@@ -89,7 +95,13 @@ export function exportContactsToCSV(contacts: Contact[]): void {
     'nome', 'empresa', 'cargo', 'email', 'telefone', 'website', 'status', 'observacoes'
   ];
   
-  const csvContent = convertToCSV(contacts, headers);
+  // Garantir que todos os contatos tenham pelo menos um nome
+  const sanitizedContacts = contacts.map(contact => ({
+    ...contact,
+    nome: contact.nome || 'Nome não informado'
+  }));
+  
+  const csvContent = convertToCSV(sanitizedContacts, headers);
   const filename = `contatos_${new Date().toISOString().split('T')[0]}.csv`;
   downloadCSV(csvContent, filename);
 }
@@ -101,7 +113,14 @@ export function exportOpportunitiesToCSV(opportunities: Opportunity[]): void {
     'data_fechamento_esperada', 'observacoes'
   ];
   
-  const csvContent = convertToCSV(opportunities, headers);
+  // Garantir que todas as oportunidades tenham pelo menos título e empresa
+  const sanitizedOpportunities = opportunities.map(opp => ({
+    ...opp,
+    titulo: opp.titulo || 'Oportunidade sem título',
+    empresa: opp.empresa || 'Empresa não informada'
+  }));
+  
+  const csvContent = convertToCSV(sanitizedOpportunities, headers);
   const filename = `oportunidades_${new Date().toISOString().split('T')[0]}.csv`;
   downloadCSV(csvContent, filename);
 }

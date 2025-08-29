@@ -123,7 +123,11 @@ const LeadsManager = ({ onStatsUpdate }: LeadsManagerProps) => {
         // Criar novo lead
         const { error } = await supabase
           .from('leads')
-          .insert({ ...data, user_id: user.id });
+          .insert({ 
+            ...data, 
+            user_id: user.id,
+            empresa: data.empresa || 'Nova Empresa',
+          });
 
         if (error) throw error;
         toast.success('Lead criado com sucesso!');
