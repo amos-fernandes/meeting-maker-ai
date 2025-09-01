@@ -76,7 +76,7 @@ const Dashboard = () => {
           <div className="flex gap-4">
             <Button variant="secondary" className="bg-white text-primary hover:bg-white/90">
               <Plus className="h-4 w-4 mr-2" />
-              Nova Campanha
+              Disparar Campanha
             </Button>
             <Button variant="outline" className="border-white/20 text-white hover:bg-white/10">
               <Bot className="h-4 w-4 mr-2" />
