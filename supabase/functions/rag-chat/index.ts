@@ -2,7 +2,7 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+const googleGeminiApiKey = Deno.env.get('GOOGLE_GEMINI_API_KEY');
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
@@ -35,10 +35,10 @@ serve(async (req) => {
       });
     }
 
-    if (!openAIApiKey) {
+    if (!googleGeminiApiKey) {
       return new Response(JSON.stringify({ 
-        response: 'OpenAI API key não configurada. Configure a chave da OpenAI nas configurações.',
-        error: 'OpenAI API key missing'
+        response: 'Google Gemini API key não configurada. Configure a chave nas configurações.',
+        error: 'Google Gemini API key missing'
       }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -99,16 +99,17 @@ serve(async (req) => {
       } catch (error) {
         console.error('Error calling generate-prospects:', error);
         return new Response(JSON.stringify({ 
-          response: `❌ Erro ao executar criação de prospects: ${error.message}. Verifique se a OpenAI está configurada corretamente.`,
+          response: `❌ Erro ao executar criação de prospects: ${error.message}. Verifique se a API do Google Gemini está configurada corretamente.`,
           error: error.message
         }), {
+          status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
     }
 
     // Resposta padrão da IA
-    console.log('Calling OpenAI for standard response...');
+    console.log('Calling Google Gemini for standard response...');
     
     const systemPrompt = `Você é um SDR especialista em prospecção B2B para consultoria tributária em Goiás.
 
@@ -121,20 +122,25 @@ COMANDOS DISPONÍVEIS:
 
 Se detectar um comando, explique o que será feito. Caso contrário, responda como consultor especialista em prospecção tributária.`;
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    // Ponto principal de alteração
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${googleGeminiApiKey}`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: message }
+        contents: [
+          {
+            parts: [
+              {
+                text: systemPrompt + '\n\n' + message
+              }
+            ]
+          }
         ],
-        max_tokens: 1000,
-        temperature: 0.5
+        generationConfig: {
+          temperature: 0.5
+        }
       }),
     });
 
@@ -142,13 +148,20 @@ Se detectar um comando, explique o que será feito. Caso contrário, responda co
       if (response.status === 429) {
         throw new Error('Limite de requisições atingido. Aguarde alguns minutos e tente novamente.');
       }
-      throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
+      throw new Error(`Google Gemini API error: ${response.status} ${response.statusText}`);
     }
 
     const data = await response.json();
-    const aiResponse = data.choices[0].message.content;
+    
+    // Novo tratamento da resposta para o formato do Gemini
+    let aiResponse = '';
+    if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0]) {
+      aiResponse = data.candidates[0].content.parts[0].text;
+    } else {
+      throw new Error('Resposta inválida da IA. Estrutura de dados inesperada.');
+    }
 
-    console.log('OpenAI response received successfully');
+    console.log('Google Gemini response received successfully');
 
     return new Response(JSON.stringify({ 
       response: aiResponse,

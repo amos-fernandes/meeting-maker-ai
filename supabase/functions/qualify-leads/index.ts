@@ -2,7 +2,8 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+// Usando a chave de API do Google Gemini
+const googleGeminiApiKey = Deno.env.get('GOOGLE_GEMINI_API_KEY');
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
@@ -51,6 +52,11 @@ serve(async (req) => {
     const qualifiedLeads = [];
 
     for (const lead of leads) {
+      if (!googleGeminiApiKey) {
+        console.error('Google Gemini API key não configurada. Pulando qualificação.');
+        continue;
+      }
+      
       const prompt = `
       Você é um especialista em qualificação de leads B2B para consultoria tributária.
       
@@ -81,38 +87,50 @@ serve(async (req) => {
       }`;
 
       try {
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${googleGeminiApiKey}`, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${openAIApiKey}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: 'gpt-4o-mini',
-            messages: [
-              { role: 'system', content: 'Você é um qualificador de leads especialista em tributação. Sempre retorne JSON válido.' },
-              { role: 'user', content: prompt }
+            contents: [
+              {
+                parts: [
+                  {
+                    text: prompt
+                  }
+                ]
+              }
             ],
-            max_tokens: 800,
-            temperature: 0.3
+            generationConfig: {
+              temperature: 0.3
+            }
           }),
         });
 
         if (!response.ok) {
           if (response.status === 429) {
-            console.error(`Rate limit atingido para lead ${lead.id}. Pulando...`);
+            console.error(`Limite de requisições do Google Gemini atingido para lead ${lead.id}. Pulando...`);
             continue;
           }
-          console.error(`OpenAI API error for lead ${lead.id}: ${response.statusText}`);
+          console.error(`Google Gemini API error for lead ${lead.id}: ${response.statusText}`);
           continue;
         }
 
         const data = await response.json();
-        const content = data.choices[0].message.content;
+        
+        let content = '';
+        if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0]) {
+          content = data.candidates[0].content.parts[0].text;
+        } else {
+          console.error(`Resposta inválida da IA para lead ${lead.id}. Estrutura de dados inesperada.`);
+          continue;
+        }
         
         let qualificationData;
         try {
-          qualificationData = JSON.parse(content);
+          const cleanedContent = content.replace(/```json\n|```/g, '');
+          qualificationData = JSON.parse(cleanedContent);
         } catch (parseError) {
           console.error(`JSON parse error for lead ${lead.id}:`, parseError);
           continue;
@@ -123,7 +141,12 @@ serve(async (req) => {
           .from('leads')
           .update({
             status: 'qualificado',
-            ...qualificationData
+            qualificationScore: qualificationData.qualificationScore,
+            urgencyLevel: qualificationData.urgencyLevel,
+            notes: qualificationData.notes,
+            bestContactTime: qualificationData.bestContactTime,
+            approachStrategy: qualificationData.approachStrategy,
+            estimatedRevenue: qualificationData.estimatedRevenue,
           })
           .eq('id', lead.id);
 
