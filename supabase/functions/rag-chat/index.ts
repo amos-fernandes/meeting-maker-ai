@@ -12,23 +12,23 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  console.log('RAG Chat function called:', req.method);
-  
+  // Handle CORS
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const body = await req.json();
-    console.log('Request body:', body);
+    console.log('RAG Chat function started');
     
+    const body = await req.json();
     const { message, userId } = body;
     
+    console.log('Processing message:', message?.substring(0, 50), 'for user:', userId);
+
     if (!message || !userId) {
-      console.error('Missing required fields:', { message: !!message, userId: !!userId });
       return new Response(JSON.stringify({ 
-        response: 'Parâmetros obrigatórios em falta.',
-        error: 'Missing message or userId'
+        response: 'Parâmetros obrigatórios em falta: message e userId são necessários.',
+        error: 'Missing required parameters'
       }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -36,105 +36,44 @@ serve(async (req) => {
     }
 
     if (!openAIApiKey) {
-      console.error('OpenAI API key not configured');
       return new Response(JSON.stringify({ 
-        response: 'Configuração da OpenAI não encontrada. Entre em contato com o administrador.',
-        error: 'OpenAI API key not configured'
+        response: 'OpenAI API key não configurada. Configure a chave da OpenAI nas configurações.',
+        error: 'OpenAI API key missing'
       }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-    
+
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    console.log('Supabase client created');
     
-    // Buscar dados do CRM para contexto
-    console.log('Fetching CRM data for user:', userId);
-    const [leadsResult, contactsResult, opportunitiesResult] = await Promise.all([
-      supabase.from('leads').select('*').eq('user_id', userId).limit(10).then(result => {
-        if (result.error) console.error('Leads fetch error:', result.error);
-        return result;
-      }),
-      supabase.from('contacts').select('*').eq('user_id', userId).limit(10).then(result => {
-        if (result.error) console.error('Contacts fetch error:', result.error);
-        return result;
-      }),
-      supabase.from('opportunities').select('*').eq('user_id', userId).limit(10).then(result => {
-        if (result.error) console.error('Opportunities fetch error:', result.error);
-        return result;
-      })
-    ]);
+    // Buscar dados do CRM
+    console.log('Fetching CRM data...');
+    const { data: leads } = await supabase
+      .from('leads')
+      .select('*')
+      .eq('user_id', userId)
+      .limit(5);
 
-    const crmContext = {
-      leads: leadsResult.data || [],
-      contacts: contactsResult.data || [],
-      opportunities: opportunitiesResult.data || []
-    };
+    console.log('Found leads:', leads?.length || 0);
 
-    // Detectar comando na mensagem
+    // Detectar comandos
     const lowerMessage = message.toLowerCase();
     let actionDetected = null;
-    let actionResponse = null;
 
     if (lowerMessage.includes('criar prospects') || lowerMessage.includes('nova campanha')) {
       actionDetected = 'generate_prospects';
-    } else if (lowerMessage.includes('qualificar') && (lowerMessage.includes('prospects') || lowerMessage.includes('leads'))) {
+    } else if (lowerMessage.includes('qualificar')) {
       actionDetected = 'qualify_leads';
-    } else if (lowerMessage.includes('criar leads')) {
-      actionDetected = 'create_leads';
-    } else if (lowerMessage.includes('criar campanhas') || lowerMessage.includes('campanha')) {
-      actionDetected = 'create_campaign';
     }
 
-    // Base de conhecimento de prospecção tributária
-    const knowledgeBase = `
-    EMPRESAS ALVO - CONSULTORIA TRIBUTÁRIA GOIÁS:
-
-    1. Jalles Machado S.A. - Agroindústria açúcar/etanol - ICMS alto, expansão recente
-    2. CRV Industrial - Etanol - Endividamento fiscal, execuções trabalhistas
-    3. São Salvador Alimentos - Frango - Auditorias, crescimento exportador
-    4. Cerradinho Bioenergia - Etanol - Expansão logística, ICMS elevado
-    5. Complem Cooperativa - Mudanças societárias, passivos fiscais
-    6. Grupo Odilon Santos - Logística - Contratos grandes, margens apertadas
-    7. Caramuru Alimentos - Soja - Exportações, benefício REINTEGRA
-    8. Grupo JC Distribuição - Atacado - Margens tributárias elevadas
-    9. União Química - Farmacêutica - Expansão em Goiás, incentivos fiscais
-    10. Mabel Alimentos - Biscoitos - Auditorias, ICMS-ST
-    11. Cereal Ouro - Arroz/grãos - Execuções fiscais, ICMS elevado
-
-    ROTEIROS DE PROSPECÇÃO:
-    - Foco em ICMS, créditos acumulados, auditoria fiscal
-    - Mencionar expansões, investimentos recentes, passivos
-    - Agendamento de 15-20 minutos para diagnóstico
-    - Tom profissional, focado em ganhos financeiros
-    `;
-
-    const systemPrompt = `Você é um SDR especialista em prospecção B2B para consultoria tributária em Goiás.
-
-    DADOS DO CRM ATUAL:
-    - Leads: ${crmContext.leads.length} cadastrados
-    - Contatos: ${crmContext.contacts.length} cadastrados  
-    - Oportunidades: ${crmContext.opportunities.length} em pipeline
-
-    CONHECIMENTO BASE:
-    ${knowledgeBase}
-
-    COMANDOS DISPONÍVEIS:
-    1. "Criar Prospects" - Gera 11 novos prospects com IA
-    2. "Qualificar Prospects/Leads" - Qualifica leads existentes
-    3. "Criar Leads" - Cadastra novos leads manualmente
-    4. "Criar Campanhas" - Desenvolve campanhas de prospecção
-
-    Se detectar um comando, explique o que será feito e confirme a execução.
-    Caso contrário, responda como consultor especialista em prospecção tributária.`;
-
-    let aiPrompt = systemPrompt + `\n\nMensagem do usuário: ${message}`;
+    console.log('Action detected:', actionDetected);
 
     // Executar ação se detectada
     if (actionDetected === 'generate_prospects') {
-      console.log('Generating prospects via generate-prospects function');
       try {
+        console.log('Calling generate-prospects function...');
+        
         const prospectResponse = await fetch(`${supabaseUrl}/functions/v1/generate-prospects`, {
           method: 'POST',
           headers: {
@@ -144,37 +83,43 @@ serve(async (req) => {
           body: JSON.stringify({ userId })
         });
 
+        console.log('Generate prospects response status:', prospectResponse.status);
+
         if (prospectResponse.ok) {
           const result = await prospectResponse.json();
-          actionResponse = `✅ **Ação Executada: Criação de Prospects**\n\n${result.message}\n\nForam gerados ${result.prospects?.length || 11} novos prospects qualificados para sua base de dados!`;
+          return new Response(JSON.stringify({ 
+            response: `✅ **Ação Executada: Criação de Prospects**\n\n${result.message}\n\nForam gerados novos prospects para sua base de dados!`,
+            actionExecuted: actionDetected
+          }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        } else {
+          throw new Error(`HTTP ${prospectResponse.status}: ${prospectResponse.statusText}`);
         }
       } catch (error) {
-        actionResponse = `❌ Erro ao executar criação de prospects: ${error.message}`;
-      }
-    } else if (actionDetected === 'qualify_leads') {
-      try {
-        const qualifyResponse = await fetch(`${supabaseUrl}/functions/v1/qualify-leads`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${supabaseServiceKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ userId })
+        console.error('Error calling generate-prospects:', error);
+        return new Response(JSON.stringify({ 
+          response: `❌ Erro ao executar criação de prospects: ${error.message}. Verifique se a OpenAI está configurada corretamente.`,
+          error: error.message
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
-
-        if (qualifyResponse.ok) {
-          const result = await qualifyResponse.json();
-          actionResponse = `✅ **Ação Executada: Qualificação de Leads**\n\n${result.message}\n\nSeus leads foram analisados e qualificados com notas A, B ou C baseadas no potencial de conversão!`;
-        }
-      } catch (error) {
-        actionResponse = `❌ Erro ao qualificar leads: ${error.message}`;
       }
     }
 
-    // Se houve ação executada, incluir no contexto
-    if (actionResponse) {
-      aiPrompt += `\n\nRESULTADO DA AÇÃO: ${actionResponse}`;
-    }
+    // Resposta padrão da IA
+    console.log('Calling OpenAI for standard response...');
+    
+    const systemPrompt = `Você é um SDR especialista em prospecção B2B para consultoria tributária em Goiás.
+
+DADOS DO CRM ATUAL:
+- Leads cadastrados: ${leads?.length || 0}
+
+COMANDOS DISPONÍVEIS:
+1. "Criar Prospects" - Gera novos prospects com IA
+2. "Qualificar Prospects/Leads" - Qualifica leads existentes
+
+Se detectar um comando, explique o que será feito. Caso contrário, responda como consultor especialista em prospecção tributária.`;
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -195,28 +140,21 @@ serve(async (req) => {
 
     if (!response.ok) {
       if (response.status === 429) {
-        throw new Error('Muitas requisições à OpenAI. Aguarde alguns minutos e tente novamente.');
+        throw new Error('Limite de requisições atingido. Aguarde alguns minutos e tente novamente.');
       }
-      throw new Error(`OpenAI API error: ${response.statusText}`);
+      throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
     }
 
     const data = await response.json();
     const aiResponse = data.choices[0].message.content;
 
-    // Adicionar informações do CRM se relevante
-    let finalResponse = aiResponse;
-    
-    if (actionResponse) {
-      finalResponse = actionResponse + '\n\n' + aiResponse;
-    }
+    console.log('OpenAI response received successfully');
 
     return new Response(JSON.stringify({ 
-      response: finalResponse,
+      response: aiResponse,
       actionExecuted: actionDetected,
       crmStats: {
-        leads: crmContext.leads.length,
-        contacts: crmContext.contacts.length,
-        opportunities: crmContext.opportunities.length
+        leads: leads?.length || 0
       }
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -225,7 +163,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in rag-chat function:', error);
     return new Response(JSON.stringify({ 
-      response: 'Desculpe, ocorreu um erro ao processar sua mensagem. Tente novamente.',
+      response: `Desculpe, ocorreu um erro: ${error.message}. Tente novamente em alguns momentos.`,
       error: error.message
     }), {
       status: 500,

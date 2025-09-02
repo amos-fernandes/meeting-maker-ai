@@ -12,20 +12,20 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  console.log('Generate prospects function called:', req.method);
-  
+  // Handle CORS
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    console.log('Generate prospects function started');
+    
     const body = await req.json();
-    console.log('Request body:', body);
-    
     const { userId } = body;
-    
+
+    console.log('Generating prospects for user:', userId);
+
     if (!userId) {
-      console.error('Missing userId');
       return new Response(JSON.stringify({ 
         success: false, 
         error: 'UserId é obrigatório'
@@ -36,7 +36,6 @@ serve(async (req) => {
     }
 
     if (!openAIApiKey) {
-      console.error('OpenAI API key not configured');
       return new Response(JSON.stringify({ 
         success: false, 
         error: 'OpenAI API key não configurada'
@@ -45,8 +44,6 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-
-    console.log('Starting OpenAI request...');
 
     const prompt = `
     Você é um especialista em prospecção B2B para uma consultoria contábil tributária especializada em grandes empresas de Goiás.
@@ -67,9 +64,7 @@ serve(async (req) => {
     6. E-mail corporativo no formato padrão
     7. Telefone corporativo
     8. Website oficial
-    9. Gancho de prospecção específico (baseado em notícias recentes, expansões, auditorias, etc.)
-    
-    IMPORTANTE: Use empresas reais e existentes. Pesquise informações atuais sobre elas.
+    9. Gancho de prospecção específico
     
     Retorne APENAS um JSON válido no formato:
     {
@@ -83,10 +78,12 @@ serve(async (req) => {
           "telefone": "(62) 3321-8200",
           "email": "joao.silva@empresa.com.br",
           "website": "empresa.com.br",
-          "gancho_prospeccao": "Investimentos recentes em expansão de capacidade e alta carga de ICMS – possível otimização tributária"
+          "gancho_prospeccao": "Investimentos recentes em expansão"
         }
       ]
     }`;
+
+    console.log('Calling OpenAI API...');
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -97,7 +94,7 @@ serve(async (req) => {
       body: JSON.stringify({
         model: 'gpt-4o-mini',
         messages: [
-          { role: 'system', content: 'Você é um especialista em prospecção B2B para consultoria tributária em Goiás. Sempre retorne JSON válido.' },
+          { role: 'system', content: 'Você é um especialista em prospecção B2B. Sempre retorne JSON válido.' },
           { role: 'user', content: prompt }
         ],
         max_tokens: 2000,
@@ -105,33 +102,34 @@ serve(async (req) => {
       }),
     });
 
+    console.log('OpenAI response status:', response.status);
+
     if (!response.ok) {
       if (response.status === 429) {
-        throw new Error('Muitas requisições à OpenAI. Aguarde alguns minutos e tente novamente.');
+        throw new Error('Limite de requisições da OpenAI atingido. Aguarde alguns minutos.');
       }
-      throw new Error(`OpenAI API error: ${response.statusText}`);
+      throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
     }
 
-    console.log('OpenAI response received:', response.status);
-    
     const data = await response.json();
-    console.log('OpenAI data parsed successfully');
-    
     const content = data.choices[0].message.content;
+    
+    console.log('Parsing OpenAI response...');
     
     let prospectsData;
     try {
       prospectsData = JSON.parse(content);
     } catch (parseError) {
       console.error('JSON parse error:', parseError);
-      throw new Error('Invalid JSON response from AI');
+      throw new Error('Resposta inválida da IA. Tente novamente.');
     }
 
     if (!prospectsData.prospects || !Array.isArray(prospectsData.prospects)) {
-      throw new Error('Invalid prospects data structure');
+      throw new Error('Estrutura de dados inválida da IA');
     }
 
-    // Salvar no Supabase
+    console.log('Saving to database...');
+
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     
     const leadsToInsert = prospectsData.prospects.map((prospect: any) => ({
@@ -154,10 +152,11 @@ serve(async (req) => {
       .select();
 
     if (insertError) {
-      throw new Error(`Database error: ${insertError.message}`);
+      console.error('Database error:', insertError);
+      throw new Error(`Erro no banco de dados: ${insertError.message}`);
     }
 
-    // Também salvar nos contatos
+    // Salvar nos contatos
     const contactsToInsert = prospectsData.prospects.map((prospect: any) => ({
       user_id: userId,
       nome: prospect.contato_decisor,
@@ -172,6 +171,8 @@ serve(async (req) => {
     await supabase
       .from('contacts')
       .insert(contactsToInsert);
+
+    console.log('Success! Generated', insertedLeads?.length || 0, 'prospects');
 
     return new Response(JSON.stringify({ 
       success: true, 
