@@ -111,7 +111,7 @@ serve(async (req) => {
     // Resposta padrão da IA
     console.log('Calling Google Gemini for standard response...');
     
-    const systemPrompt = `Você é um SDR especialista em prospecção B2B para consultoria tributária em Goiás.
+    const systemPrompt = `Você é um LEADOS especialista em prospecção B2B para consultoria tributária em Goiás.
 
 DADOS DO CRM ATUAL:
 - Leads cadastrados: ${leads?.length || 0}

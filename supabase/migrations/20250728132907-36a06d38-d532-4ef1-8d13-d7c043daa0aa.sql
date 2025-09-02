@@ -4,7 +4,7 @@ CREATE TABLE public.profiles (
   user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
   display_name TEXT,
   company TEXT,
-  role TEXT DEFAULT 'sdr',
+  role TEXT DEFAULT 'LEADOS',
   avatar_url TEXT,
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()

@@ -68,7 +68,7 @@ const Dashboard = () => {
       {/* Hero Section */}
       <div className="relative overflow-hidden bg-gradient-primary rounded-2xl p-8 text-white shadow-large">
         <div className="relative z-10">
-          <h2 className="text-3xl font-bold mb-2">Bem-vindo ao SDR AI Pro</h2>
+          <h2 className="text-3xl font-bold mb-2">Bem-vindo ao LEADOS AI Pro</h2>
           <p className="text-white/80 mb-6 max-w-2xl">
             Sua ferramenta de IA para prospecção inteligente e agendamento automático de reuniões. 
             Conecte-se com prospects de forma mais eficiente e aumente suas conversões.
