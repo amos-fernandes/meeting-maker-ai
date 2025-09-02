@@ -30,7 +30,7 @@ serve(async (req) => {
     if (leadIds && leadIds.length > 0) {
       leadsQuery = leadsQuery.in('id', leadIds);
     } else {
-      leadsQuery = leadsQuery.is('status', 'novo').limit(10);
+      leadsQuery = leadsQuery.eq('status', 'novo').limit(10);
     }
     
     const { data: leads, error: fetchError } = await leadsQuery;
@@ -88,7 +88,7 @@ serve(async (req) => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: 'gpt-4o',
+            model: 'gpt-4o-mini',
             messages: [
               { role: 'system', content: 'Você é um qualificador de leads especialista em tributação. Sempre retorne JSON válido.' },
               { role: 'user', content: prompt }
