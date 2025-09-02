@@ -94,21 +94,33 @@ const CRMDashboard = () => {
   const handleGenerateProspects = async () => {
     setIsGenerating(true);
     try {
+      console.log('Calling generate-prospects with user ID:', user?.id);
+      
       const { data, error } = await supabase.functions.invoke('generate-prospects', {
         body: { userId: user?.id }
       });
 
-      if (error) throw error;
+      console.log('Generate prospects response:', { data, error });
+
+      if (error) {
+        console.error('Supabase function invoke error:', error);
+        throw new Error(error.message || 'Erro na chamada da função');
+      }
+
+      if (!data) {
+        throw new Error('Nenhuma resposta recebida da função');
+      }
 
       if (data.success) {
         toast.success(data.message);
         await loadStats();
       } else {
-        throw new Error(data.error);
+        throw new Error(data.error || 'Erro desconhecido');
       }
     } catch (error) {
       console.error('Erro ao gerar prospects:', error);
-      toast.error(error.message || "Erro ao gerar prospects");
+      const errorMessage = error instanceof Error ? error.message : "Erro desconhecido ao gerar prospects";
+      toast.error(errorMessage);
     } finally {
       setIsGenerating(false);
     }

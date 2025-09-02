@@ -12,12 +12,41 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  console.log('Generate prospects function called:', req.method);
+  
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { userId } = await req.json();
+    const body = await req.json();
+    console.log('Request body:', body);
+    
+    const { userId } = body;
+    
+    if (!userId) {
+      console.error('Missing userId');
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: 'UserId é obrigatório'
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (!openAIApiKey) {
+      console.error('OpenAI API key not configured');
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: 'OpenAI API key não configurada'
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    console.log('Starting OpenAI request...');
 
     const prompt = `
     Você é um especialista em prospecção B2B para uma consultoria contábil tributária especializada em grandes empresas de Goiás.
@@ -83,7 +112,11 @@ serve(async (req) => {
       throw new Error(`OpenAI API error: ${response.statusText}`);
     }
 
+    console.log('OpenAI response received:', response.status);
+    
     const data = await response.json();
+    console.log('OpenAI data parsed successfully');
+    
     const content = data.choices[0].message.content;
     
     let prospectsData;

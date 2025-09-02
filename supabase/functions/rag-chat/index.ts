@@ -12,20 +12,58 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  console.log('RAG Chat function called:', req.method);
+  
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { message, userId } = await req.json();
+    const body = await req.json();
+    console.log('Request body:', body);
+    
+    const { message, userId } = body;
+    
+    if (!message || !userId) {
+      console.error('Missing required fields:', { message: !!message, userId: !!userId });
+      return new Response(JSON.stringify({ 
+        response: 'Parâmetros obrigatórios em falta.',
+        error: 'Missing message or userId'
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (!openAIApiKey) {
+      console.error('OpenAI API key not configured');
+      return new Response(JSON.stringify({ 
+        response: 'Configuração da OpenAI não encontrada. Entre em contato com o administrador.',
+        error: 'OpenAI API key not configured'
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    console.log('Supabase client created');
     
     // Buscar dados do CRM para contexto
+    console.log('Fetching CRM data for user:', userId);
     const [leadsResult, contactsResult, opportunitiesResult] = await Promise.all([
-      supabase.from('leads').select('*').eq('user_id', userId).limit(10),
-      supabase.from('contacts').select('*').eq('user_id', userId).limit(10),
-      supabase.from('opportunities').select('*').eq('user_id', userId).limit(10)
+      supabase.from('leads').select('*').eq('user_id', userId).limit(10).then(result => {
+        if (result.error) console.error('Leads fetch error:', result.error);
+        return result;
+      }),
+      supabase.from('contacts').select('*').eq('user_id', userId).limit(10).then(result => {
+        if (result.error) console.error('Contacts fetch error:', result.error);
+        return result;
+      }),
+      supabase.from('opportunities').select('*').eq('user_id', userId).limit(10).then(result => {
+        if (result.error) console.error('Opportunities fetch error:', result.error);
+        return result;
+      })
     ]);
 
     const crmContext = {
@@ -95,6 +133,7 @@ serve(async (req) => {
 
     // Executar ação se detectada
     if (actionDetected === 'generate_prospects') {
+      console.log('Generating prospects via generate-prospects function');
       try {
         const prospectResponse = await fetch(`${supabaseUrl}/functions/v1/generate-prospects`, {
           method: 'POST',

@@ -102,8 +102,15 @@ const RAGChat = () => {
         }
       });
 
+      console.log('RAG function response:', { data, error });
+
       if (error) {
+        console.error('Supabase function invoke error:', error);
         throw new Error(error.message);
+      }
+
+      if (!data) {
+        throw new Error('Nenhuma resposta recebida da função');
       }
 
       const response = data.response || "Desculpe, não consegui processar sua solicitação.";
