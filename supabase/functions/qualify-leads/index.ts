@@ -93,12 +93,16 @@ serve(async (req) => {
               { role: 'system', content: 'Você é um qualificador de leads especialista em tributação. Sempre retorne JSON válido.' },
               { role: 'user', content: prompt }
             ],
-            max_tokens: 1000,
+            max_tokens: 800,
             temperature: 0.3
           }),
         });
 
         if (!response.ok) {
+          if (response.status === 429) {
+            console.error(`Rate limit atingido para lead ${lead.id}. Pulando...`);
+            continue;
+          }
           console.error(`OpenAI API error for lead ${lead.id}: ${response.statusText}`);
           continue;
         }

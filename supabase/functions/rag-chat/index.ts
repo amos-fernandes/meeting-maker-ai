@@ -149,12 +149,15 @@ serve(async (req) => {
           { role: 'system', content: systemPrompt },
           { role: 'user', content: message }
         ],
-        max_tokens: 1500,
-        temperature: 0.7
+        max_tokens: 1000,
+        temperature: 0.5
       }),
     });
 
     if (!response.ok) {
+      if (response.status === 429) {
+        throw new Error('Muitas requisições à OpenAI. Aguarde alguns minutos e tente novamente.');
+      }
       throw new Error(`OpenAI API error: ${response.statusText}`);
     }
 

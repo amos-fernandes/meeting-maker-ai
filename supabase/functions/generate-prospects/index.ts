@@ -71,12 +71,15 @@ serve(async (req) => {
           { role: 'system', content: 'Você é um especialista em prospecção B2B para consultoria tributária em Goiás. Sempre retorne JSON válido.' },
           { role: 'user', content: prompt }
         ],
-        max_tokens: 3000,
-        temperature: 0.7
+        max_tokens: 2000,
+        temperature: 0.5
       }),
     });
 
     if (!response.ok) {
+      if (response.status === 429) {
+        throw new Error('Muitas requisições à OpenAI. Aguarde alguns minutos e tente novamente.');
+      }
       throw new Error(`OpenAI API error: ${response.statusText}`);
     }
 
