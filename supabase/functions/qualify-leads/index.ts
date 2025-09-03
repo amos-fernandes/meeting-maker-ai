@@ -58,25 +58,50 @@ serve(async (req) => {
       }
       
       const prompt = `
-      Você é um especialista em qualificação de leads B2B para consultoria tributária.
+     
+Você é um especialista em qualificação de leads B2B para consultoria tributária.
+Analise a seguinte empresa, utilizando fontes de dados públicas e auditáveis, e gere um relatório de qualificação completo e acionável com base nos seguintes dados de entrada:
+
+    Empresa: ${lead.empresa}
+
+    Setor: ${lead.setor}
+
+    CNAE: ${lead.cnae}
+
+    Regime Tributário: ${lead.regime_tributario}
+
+    Contato Decisor: ${lead.contato_decisor}
+
+Tarefas e Fontes de Dados
+
+    Análise de Notícias e Eventos:
+
+        Pesquise eventos corporativos dos últimos 12 meses (fusões, aquisições, investimentos, expansões, IPOs, etc.) em veículos de imprensa de negócios e no Diário Oficial.
+
+        Busque por balanços financeiros públicos e notícias sobre resultados que possam indicar uma alta carga tributária, perdas recorrentes ou problemas de fluxo de caixa.
+
+        Identifique eventuais autuações fiscais, problemas de compliance ou mudanças regulatórias que afetam diretamente a empresa ou o setor.
+
+    Identificação de Dores e Oportunidades:
+
+        Com base no CNAE e no regime tributário, detalhe os desafios tributários específicos mais comuns para o setor. Foque em impostos complexos como ICMS, PIS/COFINS, IRPJ/CSLL, ou em questões de incentivos fiscais e regimes especiais.
+
+        Relacione as notícias encontradas a uma dor ou oportunidade tributária concreta. Por exemplo:
+
+            Anúncio de expansão -> Oportunidade para otimização do ICMS e aproveitamento de créditos.
+
+            Balanço com alta carga tributária -> Dor de ineficiência fiscal.
+
+            Fusão -> Necessidade de due diligence tributária.
+
+    Avaliação e Priorização Estratégica:
+
+        Atribua uma pontuação de qualificação (Score) de 1 a 5, onde 5 representa a mais alta prioridade e 1 a mais baixa. Justifique a pontuação com base nas dores e oportunidades identificadas.
+
+        Defina um nível de urgência (Alta, Média, Baixa) para a abordagem, considerando a relevância e o prazo dos eventos recentes.
+
       
-      Analise a seguinte empresa e qualifique com base nos critérios:
-      - Empresa: ${lead.empresa}
-      - Setor: ${lead.setor}
-      - CNAE: ${lead.cnae}
-      - Regime Tributário: ${lead.regime_tributario}
-      - Contato: ${lead.contato_decisor}
-      
-      Tarefas:
-      1. Pesquise notícias recentes (últimos 6 meses) sobre a empresa
-      2. Identifique desafios tributários específicos do setor
-      3. Avalie o potencial de necessidade de consultoria tributária
-      4. Atribua uma nota de qualificação:
-         - A: Alta prioridade (notícias recentes relevantes, grande potencial)
-         - B: Boa prioridade (bom potencial, setor propício)
-         - C: Baixa prioridade (menor urgência)
-      
-      Retorne APENAS um JSON válido:
+      Retorne APENAS um JSON válido no seguinte formato:
       {
         "qualificationScore": "A",
         "urgencyLevel": "Alta",
