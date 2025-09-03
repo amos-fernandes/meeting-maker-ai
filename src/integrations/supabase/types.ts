@@ -14,6 +14,92 @@ export type Database = {
   }
   public: {
     Tables: {
+      campaign_scripts: {
+        Row: {
+          assunto_email: string
+          call_made: boolean | null
+          campaign_id: string
+          created_at: string
+          email_sent: boolean | null
+          empresa: string
+          id: string
+          modelo_email: string
+          roteiro_ligacao: string
+          status: string
+          updated_at: string
+          whatsapp_sent: boolean | null
+        }
+        Insert: {
+          assunto_email: string
+          call_made?: boolean | null
+          campaign_id: string
+          created_at?: string
+          email_sent?: boolean | null
+          empresa: string
+          id?: string
+          modelo_email: string
+          roteiro_ligacao: string
+          status?: string
+          updated_at?: string
+          whatsapp_sent?: boolean | null
+        }
+        Update: {
+          assunto_email?: string
+          call_made?: boolean | null
+          campaign_id?: string
+          created_at?: string
+          email_sent?: boolean | null
+          empresa?: string
+          id?: string
+          modelo_email?: string
+          roteiro_ligacao?: string
+          status?: string
+          updated_at?: string
+          whatsapp_sent?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_scripts_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaigns: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          status: string
+          target_companies: string[]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          status?: string
+          target_companies?: string[]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          status?: string
+          target_companies?: string[]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       contacts: {
         Row: {
           cargo: string | null

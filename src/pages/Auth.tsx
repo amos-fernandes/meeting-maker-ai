@@ -83,7 +83,7 @@ export default function Auth() {
       <Card className="w-full max-w-md shadow-elegant">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl bg-gradient-primary bg-clip-text text-transparent">
-            SDR AI Pro
+            LEADOS AI Pro
           </CardTitle>
           <CardDescription>
             {isSignUp ? 'Crie sua conta' : 'Entre na sua conta'}

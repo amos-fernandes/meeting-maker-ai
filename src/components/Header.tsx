@@ -1,10 +1,36 @@
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Bell, Settings, User, LogOut } from "lucide-react";
+import { Bell, Settings, User, LogOut, Send } from "lucide-react";
+import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const Header = () => {
   const { user, signOut } = useAuth();
+  const [isLaunching, setIsLaunching] = useState(false);
+
+  const handleLaunchCampaign = async () => {
+    setIsLaunching(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('launch-campaign', {
+        body: { userId: user?.id }
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        toast.success(data.message);
+      } else {
+        throw new Error(data.error);
+      }
+    } catch (error) {
+      console.error('Erro ao disparar campanha:', error);
+      toast.error(error.message || "Erro ao disparar campanha");
+    } finally {
+      setIsLaunching(false);
+    }
+  };
 
   return (
     <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-50">
@@ -12,7 +38,7 @@ const Header = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-              SDR AI Pro
+              LEADOS AI Pro
             </h1>
             <div className="hidden md:flex items-center space-x-1 text-sm text-muted-foreground">
               <span>•</span>
@@ -21,6 +47,15 @@ const Header = () => {
           </div>
           
           <div className="flex items-center space-x-4">
+            <Button 
+              onClick={handleLaunchCampaign}
+              disabled={isLaunching}
+              className="bg-accent hover:bg-accent/90 text-accent-foreground"
+            >
+              <Send className="h-4 w-4 mr-2" />
+              {isLaunching ? 'Disparando...' : 'Disparar Campanha'}
+            </Button>
+            
             <span className="hidden md:block text-sm text-muted-foreground">
               {user?.email}
             </span>

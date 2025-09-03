@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { performRAGSearch, TARGETS } from "@/data/knowledgeBase";
 import { saveLeadToCSV } from "@/utils/csvExport";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Message {
   id: string;
@@ -39,7 +40,7 @@ const RAGChat = () => {
     {
       id: '1',
       type: 'ai',
-      content: 'Olá! Sou seu assistente SDR com IA. Posso ajudar com prospecção, análise de leads e integração com Salesforce. Como posso ajudá-lo hoje?',
+      content: 'Olá! Sou seu assistente LEADOS com IA. Posso ajudar com prospecção, análise de leads e integração com Salesforce. Como posso ajudá-lo hoje?',
       timestamp: new Date(),
       sources: ['knowledge_base', 'crm_integration']
     }
@@ -86,47 +87,71 @@ const RAGChat = () => {
   const processRAGQuery = async (query: string) => {
     setIsLoading(true);
     
-    // Simular processamento RAG (substituir por chamada real)
-    setTimeout(() => {
-      let response = '';
-      let sources: string[] = [];
-      let crmAction;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        addAIMessage("Você precisa estar logado para usar o assistente RAG.");
+        setIsLoading(false);
+        return;
+      }
 
-      // Simular diferentes tipos de resposta baseado na query
-      if (query.toLowerCase().includes('lead') || query.toLowerCase().includes('prospect')) {
-        response = `Baseado na nossa base de conhecimento, aqui estão as melhores práticas para qualificar leads:
+      const { data, error } = await supabase.functions.invoke('rag-chat', {
+        body: { 
+          message: query,
+          userId: user.id
+        }
+      });
 
-• **BANT Framework**: Budget, Authority, Need, Timeline
-• **Pain Points**: Identificar dores específicas do prospect
-• **Follow-up Strategy**: Sequência de 5-7 touchpoints
+      console.log('RAG function response:', { data, error });
 
-Posso criar um novo lead no Salesforce com essas informações?`;
-        sources = ['sales_playbook', 'best_practices', 'crm_data'];
-        crmAction = 'create_lead';
-      } else if (query.toLowerCase().includes('reunião') || query.toLowerCase().includes('meeting')) {
-        response = `Analisando nosso pipeline, o melhor horário para agendar reuniões é:
+      if (error) {
+        console.error('Supabase function invoke error:', error);
+        throw new Error(error.message);
+      }
 
-• **Terça-feira 10h-12h**: Taxa de conversão 78%
-• **Quarta-feira 14h-16h**: Taxa de conversão 71%
-• **Quinta-feira 9h-11h**: Taxa de conversão 69%
+      if (!data) {
+        throw new Error('Nenhuma resposta recebida da função');
+      }
 
-Gostaria que eu agende uma reunião no Salesforce?`;
-        sources = ['analytics_data', 'calendar_integration'];
-        crmAction = 'schedule_meeting';
-      } else {
-        response = `Baseado na nossa base de conhecimento de vendas, posso ajudar com:
+      const response = data.response || "Desculpe, não consegui processar sua solicitação.";
+      const sources = ["Base de Conhecimento RAG", "CRM Database"];
+      let crmAction = null;
 
-• Qualificação de leads e prospects
-• Estratégias de abordagem personalizada
-• Agendamento inteligente de reuniões
-• Análise de pipeline e conversões
-• Integração completa com Salesforce`;
-        sources = ['knowledge_base', 'sales_methodology'];
+      // Detectar se uma ação foi executada
+      if (data.actionExecuted) {
+        switch (data.actionExecuted) {
+          case 'generate_prospects':
+            crmAction = "create_prospects";
+            break;
+          case 'qualify_leads':
+            crmAction = "qualify_leads";
+            break;
+          case 'create_leads':
+            crmAction = "create_leads";
+            break;
+          case 'create_campaign':
+            crmAction = "create_campaign";
+            break;
+        }
+      }
+
+      // Atualizar estatísticas do CRM se disponíveis
+      if (data.crmStats) {
+        setCrmData(prev => ({
+          ...prev,
+          leads: data.crmStats.leads,
+          opportunities: data.crmStats.opportunities,
+          meetings: data.crmStats.contacts
+        }));
       }
 
       addAIMessage(response, sources, crmAction);
+    } catch (error) {
+      console.error('Erro no processamento RAG:', error);
+      addAIMessage("Desculpe, ocorreu um erro ao processar sua consulta. Verifique sua conexão e tente novamente.");
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   const handleSendMessage = async () => {
@@ -174,9 +199,9 @@ Gostaria que eu agende uma reunião no Salesforce?`;
         <CardContent>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Badge variant={crmConnected ? "default" : "secondary"}>
-                {crmConnected ? "Salesforce Conectado" : "Desconectado"}
-              </Badge>
+            <Badge variant={crmConnected ? "default" : "secondary"}>
+              {crmConnected ? "CRM Local Conectado" : "CRM Disponível"}
+            </Badge>
               {crmConnected && (
                 <div className="flex gap-4 text-sm text-muted-foreground">
                   <span>Leads: {crmData.leads}</span>
@@ -188,7 +213,7 @@ Gostaria que eu agende uma reunião no Salesforce?`;
             {!crmConnected && (
               <Button onClick={connectCRM} disabled={isLoading}>
                 <Zap className="h-4 w-4 mr-2" />
-                Conectar Salesforce
+                Conectar CRM
               </Button>
             )}
           </div>
@@ -200,7 +225,7 @@ Gostaria que eu agende uma reunião no Salesforce?`;
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Bot className="h-5 w-5 text-accent" />
-            Chat RAG - Assistente SDR IA
+            Chat RAG - Assistente LEADOS IA
             <Badge variant="outline" className="ml-auto">
               <Database className="h-3 w-3 mr-1" />
               RAG Ativo
@@ -293,7 +318,7 @@ Gostaria que eu agende uma reunião no Salesforce?`;
               </Button>
             </div>
             <p className="text-xs text-muted-foreground mt-2">
-              💡 Experimente: "Como qualificar um lead?", "Agendar reunião", "Criar novo prospect"
+              💡 Experimente: "Criar prospects", "Qualificar leads", "Criar campanhas", "Analisar pipeline"
             </p>
           </div>
         </CardContent>

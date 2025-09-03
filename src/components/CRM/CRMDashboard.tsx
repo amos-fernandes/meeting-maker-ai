@@ -11,24 +11,33 @@ import {
   Calendar,
   DollarSign,
   Plus,
-  Download
+  Download,
+  Brain,
+  Sparkles,
+  CheckCircle2,
+  Zap
 } from "lucide-react";
 import LeadsManager from "./LeadsManager";
 import ContactsManager from "./ContactsManager";
 import OpportunitiesManager from "./OpportunitiesManager";
 import InteractionsManager from "./InteractionsManager";
 import SalesFunnel from "./SalesFunnel";
+import CampaignManager from "../CampaignManager";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const CRMDashboard = () => {
   const { user } = useAuth();
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isQualifying, setIsQualifying] = useState(false);
   const [stats, setStats] = useState({
     totalLeads: 0,
     totalContacts: 0,
     totalOpportunities: 0,
     totalInteractions: 0,
+    qualifiedLeads: 0,
+    hotLeads: 0,
     conversionRate: 0,
     pipelineValue: 0
   });
@@ -63,6 +72,7 @@ const CRMDashboard = () => {
 
       const totalLeads = leads?.length || 0;
       const qualifiedLeads = leads?.filter(l => l.status === 'qualificado').length || 0;
+      const hotLeads = 0; // Será preenchido depois da migração com qualificationScore
       const closedOpportunities = opportunities?.filter(o => o.estagio === 'fechamento').length || 0;
       const conversionRate = totalLeads > 0 ? (closedOpportunities / totalLeads) * 100 : 0;
       const pipelineValue = opportunities?.reduce((sum, opp) => sum + (opp.valor || 0), 0) || 0;
@@ -72,11 +82,71 @@ const CRMDashboard = () => {
         totalContacts: contacts?.length || 0,
         totalOpportunities: opportunities?.length || 0,
         totalInteractions: interactions?.length || 0,
+        qualifiedLeads,
+        hotLeads,
         conversionRate: parseFloat(conversionRate.toFixed(1)),
         pipelineValue
       });
     } catch (error) {
       console.error('Erro ao carregar estatísticas:', error);
+    }
+  };
+
+  const handleGenerateProspects = async () => {
+    setIsGenerating(true);
+    try {
+      console.log('Calling generate-prospects with user ID:', user?.id);
+      
+      const { data, error } = await supabase.functions.invoke('generate-prospects', {
+        body: { userId: user?.id }
+      });
+
+      console.log('Generate prospects response:', { data, error });
+
+      if (error) {
+        console.error('Supabase function invoke error:', error);
+        throw new Error(error.message || 'Erro na chamada da função');
+      }
+
+      if (!data) {
+        throw new Error('Nenhuma resposta recebida da função');
+      }
+
+      if (data.success) {
+        toast.success(data.message);
+        await loadStats();
+      } else {
+        throw new Error(data.error || 'Erro desconhecido');
+      }
+    } catch (error) {
+      console.error('Erro ao gerar prospects:', error);
+      const errorMessage = error instanceof Error ? error.message : "Erro desconhecido ao gerar prospects";
+      toast.error(errorMessage);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleQualifyLeads = async () => {
+    setIsQualifying(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('qualify-leads', {
+        body: { userId: user?.id }
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        toast.success(data.message);
+        await loadStats();
+      } else {
+        throw new Error(data.error);
+      }
+    } catch (error) {
+      console.error('Erro ao qualificar leads:', error);
+      toast.error(error.message || "Erro ao qualificar leads");
+    } finally {
+      setIsQualifying(false);
     }
   };
 
@@ -91,10 +161,26 @@ const CRMDashboard = () => {
         <div>
           <h1 className="text-3xl font-bold">CRM Dashboard</h1>
           <p className="text-muted-foreground">
-            Hub de prospecção inteligente com qualificação automática
+            Hub de prospecção inteligente com IA real para geração e qualificação de leads
           </p>
         </div>
         <div className="flex gap-2">
+          <Button 
+            onClick={handleGenerateProspects}
+            disabled={isGenerating || isQualifying}
+            className="bg-primary text-primary-foreground hover:bg-primary/90"
+          >
+            <Brain className="h-4 w-4 mr-2" />
+            {isGenerating ? 'Gerando...' : 'Nova Campanha IA'}
+          </Button>
+          <Button 
+            variant="outline"
+            onClick={handleQualifyLeads}
+            disabled={isQualifying || isGenerating}
+          >
+            <Sparkles className="h-4 w-4 mr-2" />
+            {isQualifying ? 'Qualificando...' : 'Qualificar Leads IA'}
+          </Button>
           <Button variant="outline" size="sm">
             <Download className="h-4 w-4 mr-2" />
             Exportar Relatório
@@ -117,34 +203,36 @@ const CRMDashboard = () => {
 
         <Card className="shadow-soft">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Contatos</CardTitle>
-            <Users className="h-4 w-4 text-accent" />
+            <CardTitle className="text-sm font-medium">Leads Qualificados</CardTitle>
+            <CheckCircle2 className="h-4 w-4 text-accent" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-accent">{stats.totalContacts}</div>
-            <p className="text-xs text-muted-foreground">contatos ativos</p>
+            <div className="text-2xl font-bold text-accent">{stats.qualifiedLeads}</div>
+            <p className="text-xs text-muted-foreground">
+              {stats.totalLeads > 0 ? `${((stats.qualifiedLeads / stats.totalLeads) * 100).toFixed(1)}%` : '0%'} do total
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-soft">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Leads Prioritários</CardTitle>
+            <Zap className="h-4 w-4 text-warning" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-warning">{stats.hotLeads}</div>
+            <p className="text-xs text-muted-foreground">score A (alta prioridade)</p>
           </CardContent>
         </Card>
 
         <Card className="shadow-soft">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Oportunidades</CardTitle>
-            <TrendingUp className="h-4 w-4 text-warning" />
+            <TrendingUp className="h-4 w-4 text-info" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-warning">{stats.totalOpportunities}</div>
+            <div className="text-2xl font-bold text-info">{stats.totalOpportunities}</div>
             <p className="text-xs text-muted-foreground">em andamento</p>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-soft">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Interações</CardTitle>
-            <Calendar className="h-4 w-4 text-info" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-info">{stats.totalInteractions}</div>
-            <p className="text-xs text-muted-foreground">realizadas</p>
           </CardContent>
         </Card>
 
@@ -177,13 +265,18 @@ const CRMDashboard = () => {
       <SalesFunnel onStatsUpdate={loadStats} />
 
       {/* Tabs para gerenciar diferentes aspectos do CRM */}
-      <Tabs defaultValue="leads" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
+      <Tabs defaultValue="campaigns" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="campaigns">Campanhas</TabsTrigger>
           <TabsTrigger value="leads">Leads</TabsTrigger>
           <TabsTrigger value="contacts">Contatos</TabsTrigger>
           <TabsTrigger value="opportunities">Oportunidades</TabsTrigger>
           <TabsTrigger value="interactions">Interações</TabsTrigger>
         </TabsList>
+        
+        <TabsContent value="campaigns">
+          <CampaignManager />
+        </TabsContent>
         
         <TabsContent value="leads">
           <LeadsManager onStatsUpdate={loadStats} />
