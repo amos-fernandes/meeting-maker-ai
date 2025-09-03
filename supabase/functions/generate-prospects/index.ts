@@ -51,42 +51,117 @@ serve(async (req) => {
     }
 
     const prompt = `
-    Você é um especialista em prospecção B2B para uma consultoria contábil tributária especializada em grandes empresas de Goiás.
-    
-    Gere EXATAMENTE 11 prospects reais de empresas de grande porte em Goiânia, Aparecida de Goiânia e região de Goiás, focando em:
-    - Agroindústria (açúcar, etanol, soja, milho, carnes)
-    - Logística e transportes
-    - Indústria farmacêutica
-    - Varejo de grande porte
-    - Energia e mineração
-    
-    Para cada prospect, identifique:
-    1. Nome real da empresa
-    2. Setor de atuação
-    3. CNAE provável
-    4. Regime tributário (Lucro Real/Presumido)
-    5. Nome e cargo do decisor (CFO, Diretor Tributário, Gerente Fiscal)
-    6. E-mail corporativo no formato padrão
-    7. Telefone corporativo
-    8. Website oficial
-    9. Gancho de prospecção específico
-    
+    Você é um especialista em inteligência de mercado focado em prospecção B2B para uma analise contábil e tributária especializada em medias empresas na cidade de goiania, estado de Goias.
+
+    Sua tarefa é identificar EXATAMENTE 50 prospects de alto potencial nas seguintes áreas:
+
+        Comércio e Varejo (bebidas, açougues, vestuários, restaurante e similares)
+
+        E-commerce e Marketplaces
+
+        Saúde e Educação (Clínicas, consultorios, Cursos)
+
+        Drogarias e Farmacias
+
+        Transportes e Logística
+
+    Profissionais Liberais e Prestadores de Serviços ( Médicos, dentistas, advogados, engenheiros, arquitetos).
+
+    Para cada prospect, você deve gerar as seguintes informações:
+
+        CNPJ
+
+        Nome real da empresa
+
+        Setor de atuação
+
+        CNAE principal
+
+        Regime tributário provável (Simples nacional, Lucro Real ou Presumido)
+
+        Nome e cargo do decisor (Ex: Sócio, CEO, CFO, Diretor, Gerente geral)
+
+        E-mail corporativo (formato nome.sobrenome@empresa.com.br)
+
+        Telefone comercial
+
+        Telefone pessoal do tomador de decisões
+
+        Website oficial
+
+        Gancho de prospecção (Este é o ponto crucial. O gancho deve ser embasado em dados públicos e auditáveis que revelem uma dor ou oportunidade real para a empresa, como:
+
+            Fiscal/Contábil: Mudanças recentes em regimes especiais de tributação (ex: ICMS), autuações fiscais (conforme notícias ou processos públicos), incentivos fiscais expirando ou mal utilizados.
+
+          Crescimento acelerado sem gestão para tomada de decisão
+
+          Controle de vendas interestaduais (difal de ICMS).
+
+
+            Financeiro: Publicação de balanços financeiros que mostram alta carga tributária, perdas recorrentes, ou margens de lucro apertadas.
+
+            Alto volume de pagamentos e recebimentos.
+
+            Gestão de folha, encargos trabalhistas e benefícios.
+
+              Regras específicas de incentivos fiscais.
+
+
+            Operacional/Estratégico: Anúncio de fusões e aquisições, expansão para novos estados, necessidade de recuperação judicial, ou entrada em um novo mercado que exige uma reestruturação tributária.
+
+          Complexidade na apuração de impostos sobre produção.
+
+          Gestão de créditos de ICMS, IPI e regimes especiais.
+
+            Controle de custos e estoques.
+
+            Grande volume de notas fiscais e transações diárias.
+
+            Apuração de ICMS, PIS, COFINS e substituição tributária.
+
+            Necessidade de planejamento tributário para reduzir custos   
+
+
+        Regulatório: Requisitos de compliance complexos ou problemas com órgãos reguladores (ex: ANVISA para farmacêuticas, ANP para energia).
+
+        A prospecção deve ser baseada em fontes confiáveis como:
+
+            Diário Oficial da União/Estado
+
+            Balanços e demonstrações financeiras publicadas
+
+            Notícias de veículos de imprensa confiáveis sobre M&A, expansões ou problemas fiscais
+
+            Comunicados de órgãos reguladores
+
+            Juntas Comerciais
+
+          Cartório de Registro Civil de Pessoas Jurídicas
+
+          Receita Federal
+
+          Prefeitura Municipal
+
+          Secretaria Estadual da Fazenda (SEFAZ)
+
+        Órgãos de Classe (quando aplicável) ex.: OAB, CRM, CRV, CREA
+
     Retorne APENAS um JSON válido no formato:
-    {
-      "prospects": [
         {
-          "empresa": "Nome da Empresa S.A.",
-          "setor": "Agroindústria - Açúcar e Etanol", 
-          "cnae": "1071-6/00",
-          "regime_tributario": "Lucro Real",
-          "contato_decisor": "João Silva (CFO)",
-          "telefone": "(62) 3321-8200",
-          "email": "joao.silva@empresa.com.br",
-          "website": "empresa.com.br",
-          "gancho_prospeccao": "Investimentos recentes em expansão"
-        }
-      ]
-    }`;
+          "prospects": [
+            {
+              "empresa": "Nome da Empresa S.A.",
+              "setor": "Agroindústria - Açúcar e Etanol", 
+              "cnae": "1071-6/00",
+              "regime_tributario": "Lucro Real",
+              "contato_decisor": "João Silva (CFO)",
+              "telefone": "(62) 3321-8200",
+              "email": "joao.silva@empresa.com.br",
+              "website": "empresa.com.br",
+              "gancho_prospeccao": "Investimentos recentes em expansão, problemas fiscais"
+            }
+          ]
+        }`;
 
     console.log('Calling Google Gemini API...');
     
