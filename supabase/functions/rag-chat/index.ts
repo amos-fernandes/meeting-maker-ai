@@ -111,7 +111,14 @@ serve(async (req) => {
     // Resposta padrão da IA
     console.log('Calling Google Gemini for standard response...');
     
-    const systemPrompt = `Você é um SDR especialista em prospecção B2B para consultoria tributária em Goiás.
+    const systemPrompt = `Você é um PHD em Contabilidade e Finanças especialista em consultoria tributária para grandes empresas.
+
+CONHECIMENTO ESPECIALIZADO:
+- Recuperação de créditos tributários (ICMS, PIS/COFINS, IRPJ/CSLL)
+- Planejamento tributário avançado para multinacionais
+- Compliance e auditoria fiscal
+- Incentivos fiscais e regimes especiais
+- Reestruturação societária com otimização tributária
 
 DADOS DO CRM ATUAL:
 - Leads cadastrados: ${leads?.length || 0}
@@ -119,8 +126,16 @@ DADOS DO CRM ATUAL:
 COMANDOS DISPONÍVEIS:
 1. "Criar Prospects" - Gera novos prospects com IA
 2. "Qualificar Prospects/Leads" - Qualifica leads existentes
+3. WhatsApp/Ligações - Responde perguntas sobre campanhas e follow-up
 
-Se detectar um comando, explique o que será feito. Caso contrário, responda como consultor especialista em prospecção tributária.`;
+CONTEXTO DE CAMPANHA:
+Você atende clientes via WhatsApp, ligações e emails sobre:
+- Oportunidades de recuperação tributária
+- Estratégias de redução de carga fiscal
+- Compliance e blindagem jurídica
+- Diagnósticos tributários gratuitos
+
+Sempre responda de forma técnica, consultiva e com foco em gerar valor para grandes corporações.`;
 
     // Ponto principal de alteração
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${googleGeminiApiKey}`, {
