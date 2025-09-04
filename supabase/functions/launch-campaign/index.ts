@@ -128,12 +128,12 @@ serve(async (req) => {
     
     console.log('Fetching hot and warm leads from CRM...');
     
-    // Buscar leads quentes e mornas do CRM
+    // Buscar leads qualificados e contatados do CRM
     const { data: leads, error: leadsError } = await supabase
       .from('leads')
       .select('*')
       .eq('user_id', userId)
-      .in('status', ['quente', 'morno']);
+      .in('status', ['qualificado', 'contatado']);
 
     if (leadsError) {
       console.error('Erro ao buscar leads:', leadsError);
@@ -143,14 +143,14 @@ serve(async (req) => {
     if (!leads || leads.length === 0) {
       return new Response(JSON.stringify({ 
         success: false,
-        error: 'Nenhum lead quente ou morno encontrado no CRM. Adicione leads primeiro.'
+        error: 'Nenhum lead qualificado ou contatado encontrado no CRM. Qualifique leads primeiro.'
       }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    console.log(`Found ${leads.length} hot/warm leads`);
+    console.log(`Found ${leads.length} qualified/contacted leads`);
     
     console.log('Creating campaign...');
     
@@ -161,7 +161,7 @@ serve(async (req) => {
       .insert({
         user_id: userId,
         name: `Campanha CRM - ${new Date().toLocaleDateString('pt-BR')}`,
-        description: `Campanha para ${leads.length} leads quentes e mornas do CRM`,
+        description: `Campanha para ${leads.length} leads qualificados e contatados do CRM`,
         target_companies: targetCompanies,
         status: 'ativa'
       })

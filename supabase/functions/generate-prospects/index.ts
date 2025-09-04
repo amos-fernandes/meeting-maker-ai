@@ -312,22 +312,83 @@ serve(async (req) => {
       console.log('Successfully parsed JSON, prospects count:', prospectsData?.prospects?.length || 0);
       
     } catch (parseError) {
-      console.error('JSON parse error:', parseError);
-      console.error('Content that failed to parse:', content.substring(0, 1000));
+      console.error('JSON parse error:', parseError.message);
+      console.error('Content that failed to parse:', content.substring(0, 500) + '...');
+      console.error('Cleaned content length:', cleanedContent.length);
+      console.error('Cleaned content start:', cleanedContent.substring(0, 200));
+      console.error('Cleaned content end:', cleanedContent.substring(-200));
       
-      // Try alternative parsing - sometimes the AI returns the JSON without the wrapper
+      // Try alternative parsing - extract complete objects manually
       try {
-        // Look for prospects array directly
-        const prospectsMatch = content.match(/"prospects"\s*:\s*\[([\s\S]*?)\]/);
+        const prospectsMatch = content.match(/"prospects"\s*:\s*\[/);
         if (prospectsMatch) {
-          const prospectsArrayStr = `{"prospects":[${prospectsMatch[1]}]}`;
-          prospectsData = JSON.parse(prospectsArrayStr);
-          console.log('Successfully parsed with alternative method');
+          const startIndex = content.indexOf('"prospects"');
+          const arrayStart = content.indexOf('[', startIndex);
+          
+          if (arrayStart !== -1) {
+            // Find complete objects
+            const prospectObjects = [];
+            let currentPos = arrayStart + 1;
+            let objectCount = 0;
+            
+            while (currentPos < content.length && objectCount < 15) { // Limit to 15 objects max
+              // Find start of next object
+              const objStart = content.indexOf('{', currentPos);
+              if (objStart === -1) break;
+              
+              // Find end of this object
+              let braceCount = 1;
+              let pos = objStart + 1;
+              let inString = false;
+              let escaped = false;
+              
+              while (pos < content.length && braceCount > 0) {
+                const char = content[pos];
+                
+                if (escaped) {
+                  escaped = false;
+                } else if (char === '\\') {
+                  escaped = true;
+                } else if (char === '"' && !escaped) {
+                  inString = !inString;
+                } else if (!inString) {
+                  if (char === '{') braceCount++;
+                  else if (char === '}') braceCount--;
+                }
+                pos++;
+              }
+              
+              if (braceCount === 0) {
+                const objStr = content.substring(objStart, pos);
+                try {
+                  const testObj = JSON.parse(objStr);
+                  if (testObj.empresa) { // Validate it has required fields
+                    prospectObjects.push(objStr);
+                    objectCount++;
+                  }
+                } catch (objParseError) {
+                  console.log(`Skipping malformed object at position ${objStart}`);
+                }
+              }
+              
+              currentPos = pos;
+            }
+            
+            if (prospectObjects.length > 0) {
+              const reconstructedJson = `{"prospects":[${prospectObjects.join(',')}]}`;
+              prospectsData = JSON.parse(reconstructedJson);
+              console.log(`Successfully reconstructed JSON with ${prospectObjects.length} prospects`);
+            } else {
+              throw new Error('Could not extract any valid prospect objects');
+            }
+          } else {
+            throw new Error('Could not find prospects array start');
+          }
         } else {
-          throw new Error('Could not extract prospects array');
+          throw new Error('Could not find prospects array in response');
         }
       } catch (altParseError) {
-        console.error('Alternative parsing also failed:', altParseError);
+        console.error('Alternative parsing also failed:', altParseError.message);
         throw new Error('Resposta inválida da IA. A resposta não está em formato JSON válido.');
       }
     }
