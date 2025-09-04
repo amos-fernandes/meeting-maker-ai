@@ -16,7 +16,7 @@ import {
   Mail,
   Building2
 } from "lucide-react";
-import { performRAGSearch, TARGETS } from "@/data/knowledgeBase";
+import { performRAGSearch } from "@/data/knowledgeBase";
 import { saveLeadToCSV } from "@/utils/csvExport";
 import { supabase } from "@/integrations/supabase/client";
 

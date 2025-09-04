@@ -23,6 +23,7 @@ import OpportunitiesManager from "./OpportunitiesManager";
 import InteractionsManager from "./InteractionsManager";
 import SalesFunnel from "./SalesFunnel";
 import CampaignManager from "../CampaignManager";
+import CampaignResults from "../CampaignResults";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -266,8 +267,9 @@ const CRMDashboard = () => {
 
       {/* Tabs para gerenciar diferentes aspectos do CRM */}
       <Tabs defaultValue="campaigns" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="campaigns">Campanhas</TabsTrigger>
+          <TabsTrigger value="results">Resultados</TabsTrigger>
           <TabsTrigger value="leads">Leads</TabsTrigger>
           <TabsTrigger value="contacts">Contatos</TabsTrigger>
           <TabsTrigger value="opportunities">Oportunidades</TabsTrigger>
@@ -276,6 +278,10 @@ const CRMDashboard = () => {
         
         <TabsContent value="campaigns">
           <CampaignManager />
+        </TabsContent>
+        
+        <TabsContent value="results">
+          <CampaignResults />
         </TabsContent>
         
         <TabsContent value="leads">
