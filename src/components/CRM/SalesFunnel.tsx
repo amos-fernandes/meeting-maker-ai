@@ -12,7 +12,8 @@ import {
   TrendingUp,
   Plus,
   Search,
-  ArrowRight
+  ArrowRight,
+  Send
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -148,6 +149,33 @@ const SalesFunnel = ({ onStatsUpdate }: SalesFunnelProps) => {
     }
   };
 
+  const handleLaunchCampaign = async () => {
+    if (!user) return;
+
+    try {
+      setLoading(true);
+      
+      const { data, error } = await supabase.functions.invoke('launch-campaign', {
+        body: { userId: user.id }
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        toast.success(data.message);
+        loadFunnelStats();
+        onStatsUpdate();
+      } else {
+        throw new Error(data.error);
+      }
+    } catch (error) {
+      console.error('Erro ao disparar campanha:', error);
+      toast.error(error.message || "Erro ao disparar campanha");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const qualifyLeadsAutomatically = async () => {
     if (!user) return;
 
@@ -218,6 +246,14 @@ const SalesFunnel = ({ onStatsUpdate }: SalesFunnelProps) => {
             Funil de Vendas
           </CardTitle>
           <div className="flex gap-2">
+            <Button 
+              onClick={handleLaunchCampaign}
+              disabled={loading}
+              className="bg-accent hover:bg-accent/90 text-accent-foreground"
+            >
+              <Send className="h-4 w-4 mr-2" />
+              {loading ? 'Disparando...' : 'Disparar Campanha'}
+            </Button>
             <Button 
               variant="outline" 
               onClick={qualifyLeadsAutomatically}
