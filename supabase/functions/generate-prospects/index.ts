@@ -6,6 +6,12 @@ const googleGeminiApiKey = Deno.env.get('GOOGLE_GEMINI_API_KEY');
 const supabaseUrl = Deno.env.get('SUPABASE_URL');
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
+console.log('Environment check:', {
+  hasGeminiKey: !!googleGeminiApiKey,
+  hasSupabaseUrl: !!supabaseUrl,
+  hasServiceKey: !!supabaseServiceKey
+});
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
@@ -20,9 +26,26 @@ serve(async (req) => {
   }
   try {
     console.log('Generate prospects function started');
-    const body = await req.json();
+    
+    let body;
+    try {
+      body = await req.json();
+    } catch (jsonError) {
+      console.error('JSON parse error:', jsonError);
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Invalid JSON in request body'
+      }), {
+        status: 400,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        }
+      });
+    }
+    
     const { userId } = body;
-    console.log('Generating prospects for user:', userId);
+    console.log('Generating prospects for user:', userId, 'Body received:', body);
     
     if (!userId) {
       return new Response(JSON.stringify({
