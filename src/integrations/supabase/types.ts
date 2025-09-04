@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      campaign_knowledge: {
+        Row: {
+          content: string
+          created_at: string
+          generated_at: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          generated_at?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          generated_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       campaign_scripts: {
         Row: {
           assunto_email: string
@@ -194,50 +221,68 @@ export type Database = {
       }
       leads: {
         Row: {
+          approach_strategy: string | null
+          best_contact_time: string | null
           cnae: string | null
           contato_decisor: string | null
           created_at: string
           email: string | null
           empresa: string
+          estimated_revenue: string | null
           gancho_prospeccao: string | null
           id: string
+          notes: string | null
+          qualification_score: string | null
           regime_tributario: string | null
           setor: string | null
           status: string | null
           telefone: string | null
           updated_at: string
+          urgency_level: string | null
           user_id: string
           website: string | null
         }
         Insert: {
+          approach_strategy?: string | null
+          best_contact_time?: string | null
           cnae?: string | null
           contato_decisor?: string | null
           created_at?: string
           email?: string | null
           empresa: string
+          estimated_revenue?: string | null
           gancho_prospeccao?: string | null
           id?: string
+          notes?: string | null
+          qualification_score?: string | null
           regime_tributario?: string | null
           setor?: string | null
           status?: string | null
           telefone?: string | null
           updated_at?: string
+          urgency_level?: string | null
           user_id: string
           website?: string | null
         }
         Update: {
+          approach_strategy?: string | null
+          best_contact_time?: string | null
           cnae?: string | null
           contato_decisor?: string | null
           created_at?: string
           email?: string | null
           empresa?: string
+          estimated_revenue?: string | null
           gancho_prospeccao?: string | null
           id?: string
+          notes?: string | null
+          qualification_score?: string | null
           regime_tributario?: string | null
           setor?: string | null
           status?: string | null
           telefone?: string | null
           updated_at?: string
+          urgency_level?: string | null
           user_id?: string
           website?: string | null
         }

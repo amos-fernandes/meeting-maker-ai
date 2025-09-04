@@ -100,47 +100,20 @@ const SalesFunnel = ({ onStatsUpdate }: SalesFunnelProps) => {
     try {
       setLoading(true);
       
-      // Importar leads da base de conhecimento
-      const { TARGETS } = await import("@/data/knowledgeBase");
-      
-      let addedCount = 0;
-      
-      for (const target of TARGETS) {
-        // Verificar se já existe
-        const { data: existing } = await supabase
-          .from('leads')
-          .select('id')
-          .eq('user_id', user.id)
-          .eq('empresa', target.empresa)
-          .single();
+      // Usar função de geração de prospects da IA
+      const { data, error } = await supabase.functions.invoke('generate-prospects', {
+        body: { userId: user.id }
+      });
 
-        if (!existing) {
-          // Criar novo lead
-          const { error } = await supabase
-            .from('leads')
-            .insert({
-              user_id: user.id,
-              empresa: target.empresa,
-              setor: target.setor,
-              cnae: target.cnae,
-              regime_tributario: target.regime_tributario,
-              contato_decisor: target.contato_decisor,
-              telefone: target.telefone,
-              email: target.email,
-              website: target.website,
-              gancho_prospeccao: target.gancho_prospeccao,
-              status: 'novo'
-            });
+      if (error) throw error;
 
-          if (!error) {
-            addedCount++;
-          }
-        }
+      if (data.success) {
+        toast.success(data.message);
+        loadFunnelStats();
+        onStatsUpdate();
+      } else {
+        throw new Error(data.error);
       }
-
-      toast.success(`Campanha criada! ${addedCount} novos leads adicionados da base de conhecimento.`);
-      loadFunnelStats();
-      onStatsUpdate();
     } catch (error) {
       console.error('Erro ao criar campanha:', error);
       toast.error('Erro ao criar campanha');

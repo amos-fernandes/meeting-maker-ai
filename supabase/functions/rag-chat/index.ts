@@ -1,7 +1,76 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { performDeepRAGSearch } from './deep-search.ts';
+
+const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+// Função para busca RAG aprimorada
+async function performDeepRAGSearch(query: string, userId: string) {
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+  
+  try {
+    const { data: leads } = await supabase
+      .from('leads')
+      .select('*')
+      .eq('user_id', userId)
+      .or(`empresa.ilike.%${query}%,setor.ilike.%${query}%,gancho_prospeccao.ilike.%${query}%`)
+      .limit(10);
+
+    const { data: contacts } = await supabase
+      .from('contacts')
+      .select('*')
+      .eq('user_id', userId)
+      .or(`nome.ilike.%${query}%,empresa.ilike.%${query}%,cargo.ilike.%${query}%`)
+      .limit(10);
+
+    const { data: campaigns } = await supabase
+      .from('campaigns')
+      .select('*, campaign_scripts(*)')
+      .eq('user_id', userId)
+      .limit(5);
+
+    const { data: allLeads } = await supabase
+      .from('leads')
+      .select('status')
+      .eq('user_id', userId);
+
+    const totalLeads = allLeads?.length || 0;
+    const qualifiedLeads = allLeads?.filter(l => l.status === 'qualificado').length || 0;
+    const activeCampaigns = campaigns?.filter(c => c.status === 'ativa').length || 0;
+
+    return {
+      totalLeads,
+      qualifiedLeads,
+      activeCampaigns,
+      relevantData: {
+        leads: leads || [],
+        contacts: contacts || [],
+        campaigns: campaigns || []
+      },
+      recentInteractions: 'Dados carregados do CRM'
+    };
+  } catch (error) {
+    console.error('Erro no deep search:', error);
+    return {
+      totalLeads: 0,
+      qualifiedLeads: 0,
+      activeCampaigns: 0,
+      relevantData: {
+        leads: [],
+        contacts: [],
+        campaigns: []
+      },
+      recentInteractions: 'Erro ao carregar dados'
+    };
+  }
+}
 
 const googleGeminiApiKey = Deno.env.get('GOOGLE_GEMINI_API_KEY');
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;

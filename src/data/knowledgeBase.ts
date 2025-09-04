@@ -174,14 +174,14 @@ export async function saveKnowledgeToFile(userId: string): Promise<string> {
       content += `${'='.repeat(50)}\n\n`;
     }
 
-    // Salvar conhecimento no banco para histórico
-    await supabase
-      .from('campaign_knowledge')
-      .upsert({
-        user_id: userId,
-        content,
-        generated_at: new Date().toISOString()
-      });
+    // Salvar conhecimento histórico (removido temporariamente até o types.ts ser atualizado)
+    // await supabase
+    //   .from('campaign_knowledge')
+    //   .upsert({
+    //     user_id: userId,
+    //     content,
+    //     generated_at: new Date().toISOString()
+    //   });
 
     return content;
   } catch (error) {
