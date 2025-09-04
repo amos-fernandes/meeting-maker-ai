@@ -154,10 +154,27 @@ Tarefas e Fontes de Dados
         
         let qualificationData;
         try {
-          const cleanedContent = content.replace(/```json\n|```/g, '');
+          // Clean the content more thoroughly
+          let cleanedContent = content.trim();
+          if (cleanedContent.startsWith('```json')) {
+            cleanedContent = cleanedContent.replace(/```json\n?/g, '');
+          }
+          if (cleanedContent.endsWith('```')) {
+            cleanedContent = cleanedContent.replace(/\n?```$/g, '');
+          }
+          
+          // Find the JSON object in the response
+          const jsonStart = cleanedContent.indexOf('{');
+          const jsonEnd = cleanedContent.lastIndexOf('}');
+          
+          if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+            cleanedContent = cleanedContent.substring(jsonStart, jsonEnd + 1);
+          }
+          
           qualificationData = JSON.parse(cleanedContent);
         } catch (parseError) {
           console.error(`JSON parse error for lead ${lead.id}:`, parseError);
+          console.error(`Content that failed to parse for lead ${lead.id}:`, content.substring(0, 200));
           continue;
         }
 
@@ -170,7 +187,7 @@ Tarefas e Fontes de Dados
             urgencyLevel: qualificationData.urgencyLevel,
             notes: qualificationData.notes,
             bestContactTime: qualificationData.bestContactTime,
-            approachStrategy: qualificationData.approachStrategy,
+            approach_strategy: qualificationData.approachStrategy,
             estimatedRevenue: qualificationData.estimatedRevenue,
           })
           .eq('id', lead.id);

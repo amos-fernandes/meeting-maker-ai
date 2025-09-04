@@ -72,14 +72,6 @@ async function performDeepRAGSearch(query: string, userId: string) {
   }
 }
 
-const googleGeminiApiKey = Deno.env.get('GOOGLE_GEMINI_API_KEY');
-const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
 
 serve(async (req) => {
   // Handle CORS

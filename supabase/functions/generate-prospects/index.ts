@@ -208,10 +208,27 @@ serve(async (req) => {
     
     let prospectsData;
     try {
-      const cleanedContent = content.replace(/```json\n|```/g, '');
+      // Clean the content more thoroughly
+      let cleanedContent = content.trim();
+      if (cleanedContent.startsWith('```json')) {
+        cleanedContent = cleanedContent.replace(/```json\n?/g, '');
+      }
+      if (cleanedContent.endsWith('```')) {
+        cleanedContent = cleanedContent.replace(/\n?```$/g, '');
+      }
+      
+      // Find the JSON object in the response
+      const jsonStart = cleanedContent.indexOf('{');
+      const jsonEnd = cleanedContent.lastIndexOf('}');
+      
+      if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+        cleanedContent = cleanedContent.substring(jsonStart, jsonEnd + 1);
+      }
+      
       prospectsData = JSON.parse(cleanedContent);
     } catch (parseError) {
       console.error('JSON parse error:', parseError);
+      console.error('Content that failed to parse:', content.substring(0, 500));
       throw new Error('Resposta inválida da IA. Tente novamente.');
     }
 
