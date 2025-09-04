@@ -46,6 +46,35 @@ const CampaignManager = () => {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
+  const handleLaunchCampaign = async (e?: React.MouseEvent) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+    
+    if (!user) return;
+
+    try {
+      setActionLoading('launch');
+      
+      const { data, error } = await supabase.functions.invoke('launch-campaign', {
+        body: { userId: user.id }
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        toast.success(data.message);
+        loadCampaigns();
+      } else {
+        throw new Error(data.error);
+      }
+    } catch (error) {
+      console.error('Erro ao disparar campanha:', error);
+      toast.error(error.message || "Erro ao disparar campanha");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const loadCampaigns = async () => {
     if (!user) return;
 
@@ -171,6 +200,17 @@ const CampaignManager = () => {
           <p className="text-muted-foreground">
             Campanhas de prospecção com WhatsApp, e-mail e acompanhamento IA
           </p>
+        </div>
+        <div className="flex gap-2">
+          <Button 
+            onClick={(e) => handleLaunchCampaign(e)}
+            disabled={actionLoading === 'launch'}
+            className="bg-accent hover:bg-accent/90 text-accent-foreground"
+            type="button"
+          >
+            <Send className="h-4 w-4 mr-2" />
+            {actionLoading === 'launch' ? 'Disparando...' : 'Disparar Campanha'}
+          </Button>
         </div>
       </div>
 
