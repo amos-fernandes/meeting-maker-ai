@@ -228,31 +228,59 @@ serve(async (req) => {
     }
     
     console.log('Parsing Google Gemini response...');
+    console.log('Raw content from Gemini:', content.substring(0, 200));
     
     let prospectsData;
     try {
       // Clean the content more thoroughly
       let cleanedContent = content.trim();
+      
+      // Remove markdown code blocks if present
       if (cleanedContent.startsWith('```json')) {
         cleanedContent = cleanedContent.replace(/```json\n?/g, '');
+      }
+      if (cleanedContent.startsWith('```')) {
+        cleanedContent = cleanedContent.replace(/```\n?/g, '');
       }
       if (cleanedContent.endsWith('```')) {
         cleanedContent = cleanedContent.replace(/\n?```$/g, '');
       }
       
-      // Find the JSON object in the response
+      // Find the JSON object in the response - look for the first { and last }
       const jsonStart = cleanedContent.indexOf('{');
       const jsonEnd = cleanedContent.lastIndexOf('}');
       
-      if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
-        cleanedContent = cleanedContent.substring(jsonStart, jsonEnd + 1);
+      if (jsonStart === -1 || jsonEnd === -1 || jsonEnd <= jsonStart) {
+        console.error('No valid JSON structure found in response');
+        console.error('Content analyzed:', cleanedContent.substring(0, 500));
+        throw new Error('Resposta da IA não contém JSON válido');
       }
       
+      cleanedContent = cleanedContent.substring(jsonStart, jsonEnd + 1);
+      console.log('Cleaned JSON content:', cleanedContent.substring(0, 200));
+      
       prospectsData = JSON.parse(cleanedContent);
+      console.log('Successfully parsed JSON, prospects count:', prospectsData?.prospects?.length || 0);
+      
     } catch (parseError) {
       console.error('JSON parse error:', parseError);
-      console.error('Content that failed to parse:', content.substring(0, 500));
-      throw new Error('Resposta inválida da IA. Tente novamente.');
+      console.error('Content that failed to parse:', content.substring(0, 1000));
+      
+      // Try alternative parsing - sometimes the AI returns the JSON without the wrapper
+      try {
+        // Look for prospects array directly
+        const prospectsMatch = content.match(/"prospects"\s*:\s*\[([\s\S]*?)\]/);
+        if (prospectsMatch) {
+          const prospectsArrayStr = `{"prospects":[${prospectsMatch[1]}]}`;
+          prospectsData = JSON.parse(prospectsArrayStr);
+          console.log('Successfully parsed with alternative method');
+        } else {
+          throw new Error('Could not extract prospects array');
+        }
+      } catch (altParseError) {
+        console.error('Alternative parsing also failed:', altParseError);
+        throw new Error('Resposta inválida da IA. A resposta não está em formato JSON válido.');
+      }
     }
 
     if (!prospectsData.prospects || !Array.isArray(prospectsData.prospects)) {
