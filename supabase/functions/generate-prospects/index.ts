@@ -236,28 +236,77 @@ serve(async (req) => {
       let cleanedContent = content.trim();
       
       // Remove markdown code blocks if present
-      if (cleanedContent.startsWith('```json')) {
-        cleanedContent = cleanedContent.replace(/```json\n?/g, '');
-      }
-      if (cleanedContent.startsWith('```')) {
-        cleanedContent = cleanedContent.replace(/```\n?/g, '');
-      }
-      if (cleanedContent.endsWith('```')) {
-        cleanedContent = cleanedContent.replace(/\n?```$/g, '');
-      }
+      cleanedContent = cleanedContent.replace(/```json\s*/g, '').replace(/```\s*/g, '');
       
       // Find the JSON object in the response - look for the first { and last }
       const jsonStart = cleanedContent.indexOf('{');
-      const jsonEnd = cleanedContent.lastIndexOf('}');
+      let jsonEnd = cleanedContent.lastIndexOf('}');
       
-      if (jsonStart === -1 || jsonEnd === -1 || jsonEnd <= jsonStart) {
-        console.error('No valid JSON structure found in response');
-        console.error('Content analyzed:', cleanedContent.substring(0, 500));
+      if (jsonStart === -1) {
+        console.error('No opening brace found in response');
         throw new Error('Resposta da IA não contém JSON válido');
       }
       
-      cleanedContent = cleanedContent.substring(jsonStart, jsonEnd + 1);
-      console.log('Cleaned JSON content:', cleanedContent.substring(0, 200));
+      // If no closing brace found, the response might be truncated
+      if (jsonEnd === -1 || jsonEnd <= jsonStart) {
+        console.log('JSON appears to be truncated, attempting to reconstruct');
+        
+        // Try to find the end of the prospects array
+        const prospectsStart = cleanedContent.indexOf('"prospects"');
+        if (prospectsStart !== -1) {
+          // Find the array opening bracket
+          const arrayStart = cleanedContent.indexOf('[', prospectsStart);
+          if (arrayStart !== -1) {
+            // Find the last complete prospect object
+            let lastCompleteObject = arrayStart;
+            let braceCount = 0;
+            let inString = false;
+            let escapeNext = false;
+            
+            for (let i = arrayStart + 1; i < cleanedContent.length; i++) {
+              const char = cleanedContent[i];
+              
+              if (escapeNext) {
+                escapeNext = false;
+                continue;
+              }
+              
+              if (char === '\\') {
+                escapeNext = true;
+                continue;
+              }
+              
+              if (char === '"') {
+                inString = !inString;
+                continue;
+              }
+              
+              if (!inString) {
+                if (char === '{') {
+                  braceCount++;
+                } else if (char === '}') {
+                  braceCount--;
+                  if (braceCount === 0) {
+                    lastCompleteObject = i;
+                  }
+                }
+              }
+            }
+            
+            if (lastCompleteObject > arrayStart) {
+              // Reconstruct the JSON with complete objects only
+              cleanedContent = '{"prospects": [' + 
+                cleanedContent.substring(arrayStart + 1, lastCompleteObject + 1) + 
+                ']}';
+              console.log('Reconstructed JSON from truncated response');
+            }
+          }
+        }
+      } else {
+        cleanedContent = cleanedContent.substring(jsonStart, jsonEnd + 1);
+      }
+      
+      console.log('Cleaned JSON content length:', cleanedContent.length);
       
       prospectsData = JSON.parse(cleanedContent);
       console.log('Successfully parsed JSON, prospects count:', prospectsData?.prospects?.length || 0);
