@@ -6,6 +6,12 @@ const googleGeminiApiKey = Deno.env.get('GOOGLE_GEMINI_API_KEY');
 const supabaseUrl = Deno.env.get('SUPABASE_URL');
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
+console.log('Environment check:', {
+  hasGeminiKey: !!googleGeminiApiKey,
+  hasSupabaseUrl: !!supabaseUrl,
+  hasServiceKey: !!supabaseServiceKey
+});
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
@@ -20,9 +26,26 @@ serve(async (req) => {
   }
   try {
     console.log('Generate prospects function started');
-    const body = await req.json();
+    
+    let body;
+    try {
+      body = await req.json();
+    } catch (jsonError) {
+      console.error('JSON parse error:', jsonError);
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Invalid JSON in request body'
+      }), {
+        status: 400,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        }
+      });
+    }
+    
     const { userId } = body;
-    console.log('Generating prospects for user:', userId);
+    console.log('Generating prospects for user:', userId, 'Body received:', body);
     
     if (!userId) {
       return new Response(JSON.stringify({
@@ -205,14 +228,169 @@ serve(async (req) => {
     }
     
     console.log('Parsing Google Gemini response...');
+    console.log('Raw content from Gemini:', content.substring(0, 200));
     
     let prospectsData;
     try {
-      const cleanedContent = content.replace(/```json\n|```/g, '');
+      // Clean the content more thoroughly
+      let cleanedContent = content.trim();
+      
+      // Remove markdown code blocks if present
+      cleanedContent = cleanedContent.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+      
+      // Find the JSON object in the response - look for the first { and last }
+      const jsonStart = cleanedContent.indexOf('{');
+      let jsonEnd = cleanedContent.lastIndexOf('}');
+      
+      if (jsonStart === -1) {
+        console.error('No opening brace found in response');
+        throw new Error('Resposta da IA não contém JSON válido');
+      }
+      
+      // If no closing brace found, the response might be truncated
+      if (jsonEnd === -1 || jsonEnd <= jsonStart) {
+        console.log('JSON appears to be truncated, attempting to reconstruct');
+        
+        // Try to find the end of the prospects array
+        const prospectsStart = cleanedContent.indexOf('"prospects"');
+        if (prospectsStart !== -1) {
+          // Find the array opening bracket
+          const arrayStart = cleanedContent.indexOf('[', prospectsStart);
+          if (arrayStart !== -1) {
+            // Find the last complete prospect object
+            let lastCompleteObject = arrayStart;
+            let braceCount = 0;
+            let inString = false;
+            let escapeNext = false;
+            
+            for (let i = arrayStart + 1; i < cleanedContent.length; i++) {
+              const char = cleanedContent[i];
+              
+              if (escapeNext) {
+                escapeNext = false;
+                continue;
+              }
+              
+              if (char === '\\') {
+                escapeNext = true;
+                continue;
+              }
+              
+              if (char === '"') {
+                inString = !inString;
+                continue;
+              }
+              
+              if (!inString) {
+                if (char === '{') {
+                  braceCount++;
+                } else if (char === '}') {
+                  braceCount--;
+                  if (braceCount === 0) {
+                    lastCompleteObject = i;
+                  }
+                }
+              }
+            }
+            
+            if (lastCompleteObject > arrayStart) {
+              // Reconstruct the JSON with complete objects only
+              cleanedContent = '{"prospects": [' + 
+                cleanedContent.substring(arrayStart + 1, lastCompleteObject + 1) + 
+                ']}';
+              console.log('Reconstructed JSON from truncated response');
+            }
+          }
+        }
+      } else {
+        cleanedContent = cleanedContent.substring(jsonStart, jsonEnd + 1);
+      }
+      
+      console.log('Cleaned JSON content length:', cleanedContent.length);
+      
       prospectsData = JSON.parse(cleanedContent);
+      console.log('Successfully parsed JSON, prospects count:', prospectsData?.prospects?.length || 0);
+      
     } catch (parseError) {
-      console.error('JSON parse error:', parseError);
-      throw new Error('Resposta inválida da IA. Tente novamente.');
+      console.error('JSON parse error:', parseError.message);
+      console.error('Content that failed to parse:', content.substring(0, 500) + '...');
+      console.error('Cleaned content length:', cleanedContent.length);
+      console.error('Cleaned content start:', cleanedContent.substring(0, 200));
+      console.error('Cleaned content end:', cleanedContent.substring(-200));
+      
+      // Try alternative parsing - extract complete objects manually
+      try {
+        const prospectsMatch = content.match(/"prospects"\s*:\s*\[/);
+        if (prospectsMatch) {
+          const startIndex = content.indexOf('"prospects"');
+          const arrayStart = content.indexOf('[', startIndex);
+          
+          if (arrayStart !== -1) {
+            // Find complete objects
+            const prospectObjects = [];
+            let currentPos = arrayStart + 1;
+            let objectCount = 0;
+            
+            while (currentPos < content.length && objectCount < 15) { // Limit to 15 objects max
+              // Find start of next object
+              const objStart = content.indexOf('{', currentPos);
+              if (objStart === -1) break;
+              
+              // Find end of this object
+              let braceCount = 1;
+              let pos = objStart + 1;
+              let inString = false;
+              let escaped = false;
+              
+              while (pos < content.length && braceCount > 0) {
+                const char = content[pos];
+                
+                if (escaped) {
+                  escaped = false;
+                } else if (char === '\\') {
+                  escaped = true;
+                } else if (char === '"' && !escaped) {
+                  inString = !inString;
+                } else if (!inString) {
+                  if (char === '{') braceCount++;
+                  else if (char === '}') braceCount--;
+                }
+                pos++;
+              }
+              
+              if (braceCount === 0) {
+                const objStr = content.substring(objStart, pos);
+                try {
+                  const testObj = JSON.parse(objStr);
+                  if (testObj.empresa) { // Validate it has required fields
+                    prospectObjects.push(objStr);
+                    objectCount++;
+                  }
+                } catch (objParseError) {
+                  console.log(`Skipping malformed object at position ${objStart}`);
+                }
+              }
+              
+              currentPos = pos;
+            }
+            
+            if (prospectObjects.length > 0) {
+              const reconstructedJson = `{"prospects":[${prospectObjects.join(',')}]}`;
+              prospectsData = JSON.parse(reconstructedJson);
+              console.log(`Successfully reconstructed JSON with ${prospectObjects.length} prospects`);
+            } else {
+              throw new Error('Could not extract any valid prospect objects');
+            }
+          } else {
+            throw new Error('Could not find prospects array start');
+          }
+        } else {
+          throw new Error('Could not find prospects array in response');
+        }
+      } catch (altParseError) {
+        console.error('Alternative parsing also failed:', altParseError.message);
+        throw new Error('Resposta inválida da IA. A resposta não está em formato JSON válido.');
+      }
     }
 
     if (!prospectsData.prospects || !Array.isArray(prospectsData.prospects)) {

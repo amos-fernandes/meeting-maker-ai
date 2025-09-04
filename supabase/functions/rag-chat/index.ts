@@ -3,6 +3,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+const googleGeminiApiKey = Deno.env.get('GOOGLE_GEMINI_API_KEY');
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
@@ -72,14 +73,6 @@ async function performDeepRAGSearch(query: string, userId: string) {
   }
 }
 
-const googleGeminiApiKey = Deno.env.get('GOOGLE_GEMINI_API_KEY');
-const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
 
 serve(async (req) => {
   // Handle CORS
@@ -157,22 +150,51 @@ serve(async (req) => {
 
         if (prospectResponse.ok) {
           const result = await prospectResponse.json();
-          return new Response(JSON.stringify({ 
-            response: `✅ **Ação Executada: Criação de Prospects**\n\n${result.message}\n\nForam gerados novos prospects para sua base de dados!`,
-            actionExecuted: actionDetected
-          }), {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
+          
+          if (result.success) {
+            return new Response(JSON.stringify({ 
+              response: `✅ **Prospects Criados com Sucesso!**\n\n${result.message}\n\n📊 **Total de prospects gerados:** ${result.totalLeads || 'N/A'}\n\n🎯 **Próximo passo:** Use o comando "Qualificar Prospects" para refinar sua lista.`,
+              actionExecuted: actionDetected,
+              crmStats: { leads: result.totalLeads }
+            }), {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+          } else {
+            throw new Error(result.error || 'Erro desconhecido na geração de prospects');
+          }
         } else {
-          throw new Error(`HTTP ${prospectResponse.status}: ${prospectResponse.statusText}`);
+          const errorText = await prospectResponse.text();
+          console.error('Generate prospects error response:', errorText);
+          
+          let errorMessage = 'Erro interno na geração de prospects';
+          try {
+            const errorData = JSON.parse(errorText);
+            errorMessage = errorData.error || errorMessage;
+          } catch (parseError) {
+            console.log('Could not parse error response, using status text');
+            errorMessage = prospectResponse.statusText || errorMessage;
+          }
+          
+          throw new Error(`Erro ${prospectResponse.status}: ${errorMessage}`);
         }
       } catch (error) {
         console.error('Error calling generate-prospects:', error);
+        
+        let userFriendlyMessage = 'Erro ao criar prospects. ';
+        
+        if (error.message.includes('500')) {
+          userFriendlyMessage += 'Problema interno no servidor de IA. Tente novamente em alguns minutos.';
+        } else if (error.message.includes('Gemini')) {
+          userFriendlyMessage += 'Verifique se a API do Google Gemini está configurada corretamente.';
+        } else {
+          userFriendlyMessage += error.message;
+        }
+        
         return new Response(JSON.stringify({ 
-          response: `❌ Erro ao executar criação de prospects: ${error.message}. Verifique se a API do Google Gemini está configurada corretamente.`,
+          response: `❌ **Erro na Criação de Prospects**\n\n${userFriendlyMessage}\n\n🔧 **Soluções:**\n• Verifique sua conexão com a internet\n• Aguarde alguns minutos e tente novamente\n• Verifique se as chaves de API estão configuradas`,
           error: error.message
         }), {
-          status: 500,
+          status: 200, // Changed to 200 to avoid client-side error handling
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }

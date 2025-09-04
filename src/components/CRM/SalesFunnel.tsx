@@ -94,7 +94,11 @@ const SalesFunnel = ({ onStatsUpdate }: SalesFunnelProps) => {
     }
   };
 
-  const createAutoLeadCampaign = async () => {
+  const createAutoLeadCampaign = async (e?: React.MouseEvent) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+    
+    console.log('🔵 createAutoLeadCampaign called');
     if (!user) return;
 
     try {
@@ -115,41 +119,18 @@ const SalesFunnel = ({ onStatsUpdate }: SalesFunnelProps) => {
         throw new Error(data.error);
       }
     } catch (error) {
-      console.error('Erro ao criar campanha:', error);
-      toast.error('Erro ao criar campanha');
+      console.error('Erro ao criar leads:', error);
+      toast.error('Erro ao criar leads');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleLaunchCampaign = async () => {
-    if (!user) return;
-
-    try {
-      setLoading(true);
-      
-      const { data, error } = await supabase.functions.invoke('launch-campaign', {
-        body: { userId: user.id }
-      });
-
-      if (error) throw error;
-
-      if (data.success) {
-        toast.success(data.message);
-        loadFunnelStats();
-        onStatsUpdate();
-      } else {
-        throw new Error(data.error);
-      }
-    } catch (error) {
-      console.error('Erro ao disparar campanha:', error);
-      toast.error(error.message || "Erro ao disparar campanha");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const qualifyLeadsAutomatically = async () => {
+  const qualifyLeadsAutomatically = async (e?: React.MouseEvent) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+    
+    console.log('🟡 qualifyLeadsAutomatically called');
     if (!user) return;
 
     try {
@@ -220,27 +201,21 @@ const SalesFunnel = ({ onStatsUpdate }: SalesFunnelProps) => {
           </CardTitle>
           <div className="flex gap-2">
             <Button 
-              onClick={handleLaunchCampaign}
-              disabled={loading}
-              className="bg-accent hover:bg-accent/90 text-accent-foreground"
-            >
-              <Send className="h-4 w-4 mr-2" />
-              {loading ? 'Disparando...' : 'Disparar Campanha'}
-            </Button>
-            <Button 
               variant="outline" 
-              onClick={qualifyLeadsAutomatically}
+              onClick={(e) => qualifyLeadsAutomatically(e)}
               disabled={loading}
+              type="button"
             >
               <Target className="h-4 w-4 mr-2" />
               Qualificar Leads
             </Button>
             <Button 
-              onClick={createAutoLeadCampaign}
+              onClick={(e) => createAutoLeadCampaign(e)}
               disabled={loading}
+              type="button"
             >
               <Plus className="h-4 w-4 mr-2" />
-              Nova Campanha
+              Criar Leads
             </Button>
           </div>
         </div>
