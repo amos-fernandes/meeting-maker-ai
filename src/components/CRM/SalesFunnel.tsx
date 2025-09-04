@@ -240,7 +240,7 @@ const SalesFunnel = ({ onStatsUpdate }: SalesFunnelProps) => {
               disabled={loading}
             >
               <Plus className="h-4 w-4 mr-2" />
-              Nova Campanha
+              Criar Leads
             </Button>
           </div>
         </div>
