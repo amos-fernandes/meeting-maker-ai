@@ -116,7 +116,6 @@ const LeadsManager = ({ onStatsUpdate }: LeadsManagerProps) => {
       setLoading(true);
 
       if (editingLead) {
-        // Atualizar lead existente
         const { error } = await supabase
           .from('leads')
           .update(data)
@@ -126,7 +125,6 @@ const LeadsManager = ({ onStatsUpdate }: LeadsManagerProps) => {
         if (error) throw error;
         toast.success('Lead atualizado com sucesso!');
       } else {
-        // Criar novo lead
         const { error } = await supabase
           .from('leads')
           .insert({ 
@@ -237,7 +235,6 @@ const LeadsManager = ({ onStatsUpdate }: LeadsManagerProps) => {
     reader.onload = async (e) => {
       const text = e.target?.result as string;
       
-      // Detect separator (comma or tab)
       const isTabSeparated = text.includes('\t');
       const separator = isTabSeparated ? '\t' : ',';
       
@@ -252,7 +249,6 @@ const LeadsManager = ({ onStatsUpdate }: LeadsManagerProps) => {
         let leadData;
         
         if (isTabSeparated) {
-          // Format: Empresa	Municipio	Regime	Grupo	Ramo	Status	Data	Responsavel	Telefone	Email	Faturamento...
           leadData = {
             empresa: columns[0]?.trim() || '',
             setor: columns[4]?.trim() || '',
@@ -264,7 +260,6 @@ const LeadsManager = ({ onStatsUpdate }: LeadsManagerProps) => {
             gancho_prospeccao: generateProspectingHook(columns[0]?.trim() || '', columns[4]?.trim() || '', columns[2]?.trim() || '')
           };
         } else {
-          // CSV format: Qualificacao,Nome da Empresa,Setor,CNPJ,Telefone,Email,CNAE,Regime,Decisor,Gancho
           leadData = {
             empresa: columns[1]?.trim() || '',
             setor: columns[2]?.trim() || '',
@@ -279,7 +274,6 @@ const LeadsManager = ({ onStatsUpdate }: LeadsManagerProps) => {
           };
         }
         
-        // Filter duplicates
         const exists = leads.some(lead => 
           lead.empresa.toLowerCase() === leadData.empresa.toLowerCase()
         );
@@ -298,7 +292,7 @@ const LeadsManager = ({ onStatsUpdate }: LeadsManagerProps) => {
     };
     
     reader.readAsText(file);
-    event.target.value = ''; // Reset file input
+    event.target.value = '';
   };
 
   const filteredLeads = leads.filter(lead =>
@@ -307,13 +301,11 @@ const LeadsManager = ({ onStatsUpdate }: LeadsManagerProps) => {
     lead.contato_decisor?.toLowerCase().includes(searchTerm.toLowerCase())
   );
   
-  // Pagination logic
   const totalPages = Math.ceil(filteredLeads.length / LEADS_PER_PAGE);
   const startIndex = (currentPage - 1) * LEADS_PER_PAGE;
   const endIndex = startIndex + LEADS_PER_PAGE;
   const paginatedLeads = filteredLeads.slice(startIndex, endIndex);
   
-  // Reset to first page when search changes
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm]);
@@ -655,7 +647,7 @@ const LeadsManager = ({ onStatsUpdate }: LeadsManagerProps) => {
                     </div>
                   </TableCell>
                 </TableRow>
-               ))}
+              ))}
             </TableBody>
           </Table>
           
