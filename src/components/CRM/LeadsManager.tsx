@@ -183,113 +183,196 @@ const LeadsManager = ({ onStatsUpdate }: LeadsManagerProps) => {
     toast.success('Leads exportados com sucesso!');
   };
 
-  const handleImportList = async () => {
+  const standardizeRegime = (regime: string) => {
+    const regimeMap: { [key: string]: string } = {
+      'Lucro Real': 'lucro_real',
+      'Real': 'lucro_real', 
+      'Lucro Presumido': 'lucro_presumido',
+      'Presumido': 'lucro_presumido',
+      'Simples Nacional': 'simples_nacional',
+      'Simples': 'simples_nacional'
+    };
+    return regimeMap[regime] || 'lucro_presumido';
+  };
+
+  const generateProspectingHook = (empresa: string, setor: string, regime: string) => {
+    const hooks = {
+      'odontol': 'Gestão de folha de pagamento para dentistas e colaboradores. Otimização fiscal e compliance para clínicas.',
+      'constru': 'Complexidade na apuração de impostos sobre construção civil. Gestão de projetos e controle orçamentário.',
+      'transport': 'Otimização de ICMS sobre serviços de transporte. Gestão de frota e controle de custos operacionais.',
+      'aliment': 'Complexidade na apuração de ICMS-ST em produtos alimentícios. Alto volume de transações diárias.',
+      'educa': 'Gestão de folha de pagamento para professores. Otimização da carga tributária sobre receitas de mensalidades.',
+      'saude': 'Apuração de impostos sobre serviços médicos. Gestão de folha de pagamento especializada.',
+      'tecnologia': 'Alta carga tributária sobre serviços de TI. Necessidade de controle fiscal robusto.',
+      'advocacia': 'Complexidade dos regimes tributários para sociedades de advogados. Alta carga sobre honorários.',
+      'default': 'Oportunidade de otimização tributária e planejamento fiscal estratégico.'
+    };
+    
+    const key = Object.keys(hooks).find(k => 
+      setor.toLowerCase().includes(k) || 
+      empresa.toLowerCase().includes(k)
+    ) || 'default';
+    
+    return hooks[key];
+  };
+
+  const importLeads = async (leadsData: any[]) => {
     if (!user) return;
     
-    const csvData = `Qualificação,Nome da Empresa,Setor de Atuação,CNPJ,Telefone,Email,CNAE Principal,Regime Tributário Provável,Nome e Cargo do Decisor,Gancho de Prospecção
-Alta Prioridade,Drogaria Pacheco S.A. (Unidades em Goiânia),Drogarias e Farmácias,61.412.110/0001-55,"(11) 3003-7881 / 0800 282 1010",imprensa@dpsp.com.br,4771-7/01,Lucro Real,Diretor Financeiro / Gerente Fiscal,"Grande volume de notas fiscais e transações diárias. Necessidade de planejamento tributário para apuração de ICMS e substituição tributária, que são complexos em redes de varejo farmacêutico. Várias filiais em Goiânia e região metropolitana."
-Média Prioridade,Gyn Transportes Ltda.,Transportes e Logística,05.827.433/0001-64,"(62) 3295-5001 / (62) 99602-5001",financeiro@gyntransportes.com.br,4930-2/02,Lucro Presumido,Sócio-Administrador,"Expansão da frota e aumento de rotas. O alto volume de pagamentos e recebimentos, além do controle de custos e combustíveis, representa uma dor crucial. Otimização do ICMS sobre serviços de transporte (ICMS-ST) pode ser uma grande oportunidade para redução de custos."
-Baixa Prioridade,Rede Goiana de Açougues e Laticínios,Comércio e Varejo - Açougues,Não Localizado,N/A,N/A,4722-9/01,Simples Nacional,Proprietário / Gerente Geral,"Crescimento acelerado com a abertura de novas unidades, o que pode levar a um faturamento que ultrapasse o limite do Simples Nacional. Uma reestruturação para o Lucro Presumido ou Real pode ser mais vantajosa para manter a margem de lucro e a sustentabilidade fiscal."
-Média Prioridade,Colégio Olimpo Goiânia,Educação - Ensino Médio,03.821.200/0002-39,"(62) 3285-7879",goiania@colegioolimpo.com.br,8520-1/00,Lucro Presumido,Diretor Administrativo / Sócio,"Grande volume de matrículas e mensalidades. A gestão de folha de pagamento para professores e colaboradores, além dos encargos trabalhistas, é um ponto sensível. O planejamento tributário pode otimizar a carga fiscal sobre a receita."
-Alta Prioridade,Olist,E-commerce e Marketplaces,18.337.223/0001-35,"(41) 3544-8395",contato@olist.com,7490-1/04,Lucro Real,CFO / Diretor de Operações,"Alto volume de vendas interestaduais com controle de DIFAL (Diferencial de Alíquota) de ICMS. O gerenciamento de um grande número de parceiros comerciais e notas fiscais diárias, somado a mudanças na legislação tributária para e-commerce, cria uma grande dor fiscal."
-Média Prioridade,Clínica Médica Santa Ana,Saúde - Clínicas e Consultórios,20.916.484/0001-09,"(62) 3995-1800",contato@clinicasantaanago.com.br,8630-5/02,Lucro Presumido,Sócio-Diretor / Gerente Administrativo,"Crescimento de atendimentos e expansão da equipe. A complexidade na apuração de impostos sobre serviços médicos, a gestão da folha de pagamento de médicos e a necessidade de controle de custos operacionais podem ser um grande desafio."
-Média Prioridade,Di Rezende Advocacia e Consultoria,Profissionais Liberais - Advocacia,09.057.436/0001-90,"(62) 3092-2122",contato@direzende.com.br,6911-7/01,Lucro Presumido,Sócio Fundador,"Assessoria jurídica para empresas de alta e média complexidade. A complexidade dos regimes tributários para sociedades de advogados, a necessidade de planejamento fiscal e a alta carga de impostos sobre serviços são desafios conhecidos para o setor."
-Média Prioridade,Mr. Ideas - Design & Marketing Digital,Prestadores de Serviços - Marketing Digital,24.318.598/0001-14,"(62) 3639-6111 / (62) 98115-3221",contato@mrideas.com.br,7311-4/00,Lucro Presumido,CEO / Diretor de Operações,"Crescimento contínuo e necessidade de gestão financeira mais robusta para acompanhar a entrada de novos projetos. A alta carga tributária sobre serviços, a gestão de contratos com clientes e o controle de custos com colaboradores podem ser otimizados com um planejamento fiscal adequado."
-Alta Prioridade,Log10 Transportes,Transportes e Logística,24.237.893/0001-00,"(62) 3642-1010",comercial.gyn@log10.com.br,4930-2/02,Lucro Presumido,Diretor Comercial / Proprietário,"Especialização em transporte de produtos farmacêuticos e eletrônicos de alto valor. A complexidade na apuração de ICMS sobre o serviço de transporte e a gestão dos custos operacionais, além da necessidade de compliance regulatório, são dores importantes a serem exploradas."
-Alta Prioridade,Tiradentes Produtos para Saúde,Comércio e Varejo - Produtos Médicos,01.034.331/0001-30,"(62) 3221-8900",tiradentes@tiradentes.com.br,4645-1/01,Lucro Real,Diretor Administrativo e Financeiro,"Especialização em produtos médicos e hospitalares. A complexidade do regime de ICMS e a necessidade de controle de estoque e transações diárias indicam uma alta complexidade fiscal. A otimização de tributos na cadeia de suprimentos pode gerar grande economia."
-Média Prioridade,Virta Engenharia,Profissionais Liberais - Engenharia,10.975.319/0001-38,"(62) 3224-6444",contato@virtaengenharia.com.br,4120-4/00,Lucro Presumido,Sócio-Diretor / Gerente Financeiro,"Atuação em projetos comerciais, industriais e residenciais de grande porte. A gestão de projetos, o controle orçamentário e a complexidade na apuração de impostos sobre a construção civil (ISS, IRPJ, CSLL) são desafios que a empresa enfrenta em um cenário de expansão."
-Média Prioridade,Clínica Pop Med,Saúde - Clínicas Populares,24.931.328/0001-07,"(62) 3622-6816",gyn@clinicapopmed.com.br,8630-5/03,Lucro Presumido,Diretor Financeiro / Gerente Administrativo,"Grande volume de consultas e exames em diversas especialidades, com foco em preços acessíveis. A alta demanda pode sobrecarregar a gestão financeira e fiscal. Otimização de impostos sobre serviços e a gestão de folha e encargos trabalhistas para um grande corpo de profissionais são oportunidades claras."
-Média Prioridade,Colégio Teo,Educação - Ensino Básico,25.101.405/0001-08,"(62) 3251-8811",colegio@colegio-teo.com.br,8513-9/00,Lucro Presumido,Sócio-Proprietário,"Escola com alta aprovação em vestibulares, indicando um fluxo contínuo de novas matrículas. A gestão de um grande número de alunos e a complexidade na apuração de impostos sobre a receita de mensalidades, bem como a administração de benefícios e encargos da folha de pagamento, são áreas para otimização."
-Alta Prioridade,Js Distribuidora de Peças S/A,Comércio e Varejo - Autopeças,01.272.235/0001-50,"(62) 4012-3000",faleconosco@jspecas.com.br,4530-7/03,Lucro Real,Diretor Financeiro / Controller,"Atua como distribuidora em grande escala. O controle de estoque, o alto volume de notas fiscais de entrada e saída, a complexidade da Substituição Tributária (ICMS-ST) no setor de autopeças e a gestão de créditos fiscais são dores significativas que impactam a margem de lucro."
-Média Prioridade,Clínica Vittá Goiânia,Saúde - Clínicas Populares,26.289.467/0001-83,"(62) 3996-0505",contato@clinicavitta.com,8630-5/03,Lucro Presumido,Diretor Administrativo,"Expansão para várias unidades (Centro, Terminal Bandeiras, Buriti Shopping), indicando um crescimento acelerado. A complexidade na gestão financeira e fiscal de múltiplos CNPJs, bem como a necessidade de um controle rigoroso sobre os custos operacionais, são grandes oportunidades de consultoria."
-Média Prioridade,Colégio Simbios,Educação - Ensino Médio,04.975.452/0001-72,"(62) 3942-3232",faleconosco@colegiosimbios.com.br,8520-1/00,Lucro Presumido,Sócio-Diretor,"Uma das escolas mais bem ranqueadas no ENEM, o que atrai alta demanda. A gestão do crescimento e a otimização tributária, especialmente em relação ao PIS e COFINS e ao IRPJ, podem garantir a sustentabilidade financeira da instituição e a alocação de recursos para novos investimentos."`;
+    const { error } = await supabase
+      .from('leads')
+      .insert(leadsData.map(lead => ({ ...lead, user_id: user.id })));
+      
+    if (error) throw error;
+    
+    loadLeads();
+    onStatsUpdate();
+  };
+
+  const handleFileImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const text = e.target?.result as string;
+      
+      // Detect separator (comma or tab)
+      const isTabSeparated = text.includes('\t');
+      const separator = isTabSeparated ? '\t' : ',';
+      
+      const lines = text.split('\n').filter(line => line.trim());
+      const newLeads = [];
+      
+      for (const line of lines) {
+        const columns = line.split(separator);
+        
+        if (columns.length < 2) continue;
+        
+        let leadData;
+        
+        if (isTabSeparated) {
+          // Format: Empresa	Municipio	Regime	Grupo	Ramo	Status	Data	Responsavel	Telefone	Email	Faturamento...
+          leadData = {
+            empresa: columns[0]?.trim() || '',
+            setor: columns[4]?.trim() || '',
+            regime_tributario: standardizeRegime(columns[2]?.trim() || ''),
+            contato_decisor: columns[7]?.trim() || '',
+            telefone: columns[8]?.trim() === '-' ? '' : columns[8]?.trim() || '',
+            email: columns[9]?.trim() === '-' ? '' : columns[9]?.trim() || '',
+            status: columns[5]?.toLowerCase().includes('ativa') ? 'ativo' : 'inativo',
+            gancho_prospeccao: generateProspectingHook(columns[0]?.trim() || '', columns[4]?.trim() || '', columns[2]?.trim() || '')
+          };
+        } else {
+          // CSV format: Qualificacao,Nome da Empresa,Setor,CNPJ,Telefone,Email,CNAE,Regime,Decisor,Gancho
+          leadData = {
+            empresa: columns[1]?.trim() || '',
+            setor: columns[2]?.trim() || '',
+            regime_tributario: standardizeRegime(columns[7]?.trim() || ''),
+            contato_decisor: columns[8]?.trim() || '',
+            telefone: columns[4]?.trim() || '',
+            email: columns[5]?.trim() || '',
+            cnae: columns[6]?.trim() || '',
+            gancho_prospeccao: columns[9]?.trim() || '',
+            qualification_score: columns[0]?.trim() || '',
+            notes: `Qualificação: ${columns[0]?.trim() || 'N/A'}. CNPJ: ${columns[3]?.trim() || 'N/A'}`
+          };
+        }
+        
+        // Filter duplicates
+        const exists = leads.some(lead => 
+          lead.empresa.toLowerCase() === leadData.empresa.toLowerCase()
+        );
+        
+        if (!exists && leadData.empresa) {
+          newLeads.push(leadData);
+        }
+      }
+      
+      if (newLeads.length > 0) {
+        await importLeads(newLeads);
+        toast.success(`${newLeads.length} leads importados com sucesso!`);
+      } else {
+        toast.error('Nenhum lead novo encontrado para importar');
+      }
+    };
+    
+    reader.readAsText(file);
+    event.target.value = ''; // Reset file input
+  };
+
+    if (!user) return;
+    
+    const thirdPartData = `F E C HOLDING LTDA	GOIANIA	Presumido	Sem Grupo	Holdings de instituições não-financeiras	Ativa	01/01/2017	LEONARDO FERNANDES DE CASTRO	-	luisrodrigues702@gmail.com	R$ 0	0	R$ 0	0	0%				
+F G 2 EMPREENDIMENTOS E PARTICIPACOES	GOIANIA	Presumido	JURANDIR 	Holdings de instituições não-financeiras	Ativa	01/01/2017	JURANDIR DIAS DE PAULA JUNIOR	-	jurandirdiasadv@gmail.com	R$ 0	0	R$ 192	50	0%				
+FA1 LTDA ME	GOIANIA	Simples	Sem Grupo	Comércio varejista de produtos alimentícios em geral ou especializado em produtos alimentícios não especificados anteriormente	Inativa	01/01/2017	GUSTAVO RESENDE BALDUINO BRASIL	-	gustavo.balduino@hotmail.com	R$ 0	0	R$ 0	0	0%				
+FABIO STIVAL 69400733100	APARECIDA DE GOIANIA	Sem regime definido	Sem Grupo	Promoção de vendas	Inativa	01/01/2017	FABIO STIVAL	-	adm.fdfhospitalar@gmail.com	R$ 0	0	R$ 0	0	0%				
+FACIAL CLINICA ODONTOLOGICA SS	GOIANIA	Simples	MARIANITA 	Atividade odontológica	Ativa	01/01/2017	MARIANITA BATISTA DE MACEDO NERY	32121200	clinica-facial@hotmail.com	R$ 257.696	76	R$ 14.197	64	6%				
+FACURE DE VITO CONSULTORIA EIRELI ME	GOIANIA	Presumido	Sem Grupo	Atividades de consultoria em gestão empresarial , exceto consultoria técnica específica	Inativa	01/01/2017	LUCIANA FACURE DE VITO	-	luciana@fralle.com.br	R$ 0	0	R$ 0	0	0%			
+FAPF LTDA ME	GOIANIA	Sem regime definido	Sem Grupo	Comércio varejista de produtos alimentícios em geral ou especializado em produtos alimentícios não especificados anteriormente	Inativa	01/01/2017	EMILIANO AMARAL DO CRATO	998240190	caemiliano@gmail.com	R$ 0	0	R$ 0	0	0%				
+FAZAN SERVICOS CORPORATIVOS EIRELI	GOIANIA	Sem regime definido	Sem Grupo	Serviços combinados de escritório e apoio administrativo	Inativa	01/01/2017	DUILIMAR DIVINO DA SILVA JUBE FILHO	-	-	R$ 0	0	R$ 0	0	0%				
+FAZENDA JUREMA LTDA EPP	CAMPO ALEGRE DE GOIAS	Sem regime definido	Sem Grupo	Outras sociedades de participação , exceto holdings	Inativa	01/01/2017	ADENIR TEIXIERA PERES JUNIOR	-	a.teixeira@tss.adv.br	R$ 0	0	R$ 0	0	0%			
+FDF DISTRIBUIDORA DE MEDICAMENTOS	APARECIDA DE GOIANIA	Simples	Sem Grupo	Comércio atacadista de medicamentos e drogas de uso humano	Inativa	01/01/2017	MARCIO VAZ DE SOUZA 	-	admfdfhospitalar@hotmail.com	R$ 0	0	R$ 0	0	0%				
+FEDERAL CONSTRUTORA LTDA	SENADOR CANEDO	Simples	Sem Grupo	Construção de rodovias e ferrovias	Inativa	01/01/2017	WESLEY RODRIGUES VIDAL	-	financeiro@federalcontstrutora.com.br	R$ 0	0	R$ 0	0	0%				
+FEDERAL COMERCIO DE OLEOS EIRELI	SENADOR CANEDO	Real	Sem Grupo	Comércio atacadista especializado de materiais de construção não especificados anteriormente	Inativa	01/01/2017	WANDERSON RODRIGUES VIDAL	-	financeiro@federalcontstrutora.com.br	R$ 0	0	R$ 0	0	0%				
+FERNANDO HENRIQUE FERNANDES	GOIANIA	Simples	PF 	Atividade odontológica	Ativa	01/01/2017	FERNANDO HENRIQUE FERNANDES	-	clinicaathosgoiania@gmail.com	R$ 0	0	R$ 0	0	0%				
+FERREIRA E CARDOSO COLCHOES LTDA	GOIANIA	Sem regime definido	Sem Grupo	Comércio varejista de artigos de colchoaria	Inativa	01/01/2017	RHUAN CARLOS DO NASCIMENTO	-	auria.francielyo@gmail.com	R$ 0	0	R$ 0	0	0%				
+O GREAT AMAZON WORLD FISHING RALLY	SANTO ANTONIO DE GOIAS	Presumido	THE AMAZON 	Outras atividades associativas profissionais	Sem Movimento	13/03/2017	KEISUKE ONODA	35351174	pedro.nascimento@gmail.com	R$ 0	0	R$ 0	0	0%				
+FLEX TRUCK SERVICE LTDA EPP	GOIANIA	Simples	FLEX 	Serviços combinados de escritório e apoio administrativo	Ativa	01/01/2017	RICARDO AUGUSTO CARNAES CASTELHANO	991506000	anna.lucia@flextirepneus.com	R$ 0	0	R$ 441	42	0%				
+FLEX TRUCK SERVICE LTDA	SANTO ANTONIO DE GOIAS	Simples	FLEX 	Serviços de manutenção e reparação elétrica de veículos automotores	Inativa	01/01/2017	RICARDO AUGUSTO CARNAES CASTELHANO	991506000	-	R$ 0	0	R$ 0	0	0%				
+FLEXTIRE RECAPAGENS LTDA	SANTO ANTONIO DE GOIAS	Real	FLEX 	Reforma de pneumáticos usados	Ativa	01/01/2017	RICARDO AUGUSTO CARNAES CASTELHANO	991506000	anna.lucia@flextirepneus.com	R$ 0	0	R$ 0	0	0%				
+FLORIDIAN COMERCIO E PARTICIPACOES LTDA	GOIANIA	Real	FRALLE 	Comércio varejista de combustíveis para veículos automotores	Ativa	01/01/2017	LELIO VIEIRA CARNEIRO JUNIOR	-	sergio@fralle.com.br	R$ 0	0	R$ 0	0	0%				
+FLOW REPRESENTACOES LTDA	GOIANIA	Simples	Sem Grupo	Representantes comerciais e agentes do comércio de mercadorias em geral não especializado	Ativa	10/08/2017	JOSE LEANDRO MARTINS SOARES	-	jl.tresirmaos@terra.com.br	R$ 221.162	67	R$ 19.943	99	9%				
+FORECAST CORRETORA DE SEGUROS DE VIDA	GOIANIA	Presumido	FORECAST 	Corretores e agentes de seguros , de planos de previdência complementar e de saúde	Ativa	01/01/2017	ANA PAULA VIEIRA DE PAULA SOUZA GUIMARAES	-	printecartuchos@hotmail.com	R$ 0	0	R$ 0	0	0%			
+VALORIE ENGENHARIA E INCORPORACAO LTDA	GOIANIA	Presumido	Sem Grupo	Serviços de engenharia	Inativa	01/01/2017	ANDRE DA VEIGA JARDIM MOURA	-	andre@forteengenharia.com.br	R$ 0	0	R$ 0	0	0%				
+FOYER MAQUETES E PROJETOS LTDA	GOIANIA	Simples	Sem Grupo	Serviços de arquitetura	Ativa	01/01/2017	HUGO LEONARDO RODRIGUES SANTOS	-	rsantos.hugo@gmaill.com	R$ 43.326	8	R$ 960	0	2%`;
 
     try {
       setImporting(true);
       
-      const lines = csvData.trim().split('\n');
-      const headers = lines[0].split(',');
-      const dataLines = lines.slice(1);
+      const lines = thirdPartData.trim().split('\n');
+      const newLeads = [];
       
-      const leadsToImport = dataLines.map(line => {
-        // Parse CSV line considering quoted fields
-        const values = [];
-        let current = '';
-        let inQuotes = false;
+      for (const line of lines) {
+        const columns = line.split('\t');
         
-        for (let i = 0; i < line.length; i++) {
-          const char = line[i];
-          if (char === '"') {
-            inQuotes = !inQuotes;
-          } else if (char === ',' && !inQuotes) {
-            values.push(current.trim());
-            current = '';
-          } else {
-            current += char;
-          }
+        if (columns.length < 10) continue;
+        
+        const leadData = {
+          empresa: columns[0]?.trim() || '',
+          setor: columns[4]?.trim() || '',
+          regime_tributario: standardizeRegime(columns[2]?.trim() || ''),
+          contato_decisor: columns[7]?.trim() || '',
+          telefone: columns[8]?.trim() === '-' ? '' : columns[8]?.trim() || '',
+          email: columns[9]?.trim() === '-' ? '' : columns[9]?.trim() || '',
+          status: columns[5]?.toLowerCase().includes('ativa') ? 'ativo' : 'inativo',
+          gancho_prospeccao: generateProspectingHook(columns[0]?.trim() || '', columns[4]?.trim() || '', columns[2]?.trim() || '')
+        };
+        
+        // Filter duplicates
+        const exists = leads.some(lead => 
+          lead.empresa.toLowerCase() === leadData.empresa.toLowerCase()
+        );
+        
+        if (!exists && leadData.empresa) {
+          newLeads.push(leadData);
         }
-        values.push(current.trim());
-        
-        // Map CSV fields to lead object
-        const [qualificacao, empresa, setor, cnpj, telefone, email, cnae, regime, contato, gancho] = values;
-        
-        const statusMap: { [key: string]: string } = {
-          'Alta Prioridade': 'qualificado',
-          'Média Prioridade': 'contatado', 
-          'Baixa Prioridade': 'novo'
-        };
-        
-        const regimeMap: { [key: string]: string } = {
-          'Lucro Real': 'lucro_real',
-          'Lucro Presumido': 'lucro_presumido',
-          'Simples Nacional': 'simples_nacional'
-        };
-        
-        return {
-          empresa: empresa?.replace(/"/g, '') || '',
-          setor: setor?.replace(/"/g, '') || '',
-          cnae: cnae?.replace(/"/g, '') || '',
-          regime_tributario: regimeMap[regime?.replace(/"/g, '')] || 'lucro_presumido',
-          contato_decisor: contato?.replace(/"/g, '') || '',
-          telefone: telefone?.replace(/"/g, '').replace('N/A', '') || '',
-          email: email?.replace(/"/g, '').replace('N/A', '') || '',
-          gancho_prospeccao: gancho?.replace(/"/g, '') || '',
-          status: statusMap[qualificacao?.replace(/"/g, '')] || 'novo',
-          user_id: user.id
-        };
-      });
-      
-      // Filter out leads that already exist
-      const existingEmpresas = leads.map(lead => lead.empresa.toLowerCase());
-      const newLeads = leadsToImport.filter(lead => 
-        !existingEmpresas.includes(lead.empresa.toLowerCase()) && 
-        lead.empresa.trim() !== ''
-      );
-      
-      if (newLeads.length === 0) {
-        toast.info('Nenhum lead novo encontrado para importar');
-        return;
       }
       
-      const { error } = await supabase
-        .from('leads')
-        .insert(newLeads);
-        
-      if (error) throw error;
-      
-      toast.success(`${newLeads.length} leads importados com sucesso!`);
-      loadLeads();
-      onStatsUpdate();
+      if (newLeads.length > 0) {
+        await importLeads(newLeads);
+        toast.success(`${newLeads.length} leads da terceira parte importados com sucesso!`);
+      } else {
+        toast.error('Nenhum lead novo da terceira parte encontrado para importar');
+      }
       
     } catch (error) {
-      console.error('Erro ao importar leads:', error);
-      toast.error('Erro ao importar leads');
+      console.error('Erro ao importar terceira parte:', error);
+      toast.error('Erro ao importar terceira parte');
     } finally {
       setImporting(false);
     }
   };
-
-  const handleImportList2 = async () => {
     if (!user) return;
     
     const csvData = `Empresa	Municipio	Regime	Grupo	Ramo	Status (Domínio)	Data de cadastro	Responsável	Telefone	Email	Faturamento	Impostos	% de imposto
@@ -467,13 +550,20 @@ BIZ CENTER LTDA	GOIANIA	Simples	Sem Grupo	Serviços combinados de escritório e 
             Gerenciar Leads
           </CardTitle>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={handleImportList} disabled={importing}>
+            <input
+              type="file"
+              accept=".csv,.txt"
+              onChange={handleFileImport}
+              style={{ display: 'none' }}
+              id="file-input"
+            />
+            <Button variant="outline" onClick={() => document.getElementById('file-input')?.click()}>
               <Upload className="h-4 w-4 mr-2" />
-              {importing ? 'Importando...' : 'Importar Lista 1'}
+              Abrir
             </Button>
-            <Button variant="outline" onClick={handleImportList2} disabled={importing}>
+            <Button variant="outline" onClick={handleImportList3} disabled={importing}>
               <Upload className="h-4 w-4 mr-2" />
-              {importing ? 'Importando...' : 'Importar Lista 2'}
+              {importing ? 'Importando...' : 'Importar Parte 3'}
             </Button>
             <Button variant="outline" onClick={handleExport} disabled={leads.length === 0}>
               <Download className="h-4 w-4 mr-2" />
