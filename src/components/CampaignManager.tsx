@@ -133,6 +133,29 @@ const CampaignManager = () => {
     }
   };
 
+  const handleTriggerWhatsAppPromo = async (campaignId: string) => {
+    setActionLoading('whatsapp-promo');
+    try {
+      const { data, error } = await supabase.functions.invoke('whatsapp-promo', {
+        body: { campaignId, userId: user?.id, promoType: 'consultoria' }
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        toast.success(`Promo-campanha WhatsApp enviada! ${data.sentCount} mensagens preparadas para ${data.atendimentoNumber}`);
+        loadCampaignScripts(campaignId);
+      } else {
+        throw new Error(data.error);
+      }
+    } catch (error) {
+      console.error('Erro ao enviar promo WhatsApp:', error);
+      toast.error("Erro ao enviar promo-campanha WhatsApp");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const handleTriggerWhatsApp = async (campaignId: string) => {
     setActionLoading('whatsapp');
     try {
@@ -312,6 +335,15 @@ const CampaignManager = () => {
                       >
                         <MessageSquare className="h-4 w-4 mr-2" />
                         {actionLoading === 'whatsapp' ? 'Enviando...' : 'Enviar WhatsApp'}
+                      </Button>
+                      <Button
+                        onClick={() => handleTriggerWhatsAppPromo(selectedCampaign.id)}
+                        disabled={actionLoading === 'whatsapp-promo'}
+                        size="sm"
+                        className="bg-primary hover:bg-primary/90"
+                      >
+                        <Send className="h-4 w-4 mr-2" />
+                        {actionLoading === 'whatsapp-promo' ? 'Enviando...' : 'Promo WhatsApp'}
                       </Button>
                       <Button
                         onClick={() => handleTriggerEmails(selectedCampaign.id)}
