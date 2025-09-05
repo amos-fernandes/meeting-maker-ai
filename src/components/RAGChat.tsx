@@ -318,7 +318,7 @@ const RAGChat = () => {
               </Button>
             </div>
             <p className="text-xs text-muted-foreground mt-2">
-              💡 Experimente: "Criar prospects", "Qualificar leads", "Criar campanhas", "Analisar pipeline"
+              💡 Experimente: "Criar prospects", "Agendar ligação", "Gerar proposta", "Criar conteúdo LinkedIn", "Falar com humano"
             </p>
           </div>
         </CardContent>
