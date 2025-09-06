@@ -265,9 +265,13 @@ const Dashboard = () => {
                   LEADOS Consultor inteligente via WhatsApp.
                 </p>
               </div>
-              <Button className="w-full" variant="outline">
+              <Button 
+                className="w-full" 
+                variant="outline"
+                onClick={() => window.dispatchEvent(new CustomEvent('openWhatsAppBot'))}
+              >
                 <MessageSquare className="h-4 w-4 mr-2" />
-                Abrir Chat RAG
+                Iniciar Atendimento WhatsApp
               </Button>
             </div>
           </CardContent>
