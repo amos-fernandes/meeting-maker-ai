@@ -69,5 +69,8 @@ verify_jwt = true
 [functions.whatsapp-campaign]
 verify_jwt = true
 
+[functions.whatsapp-promo]
+verify_jwt = true
+
 [functions.email-campaign]
 verify_jwt = true

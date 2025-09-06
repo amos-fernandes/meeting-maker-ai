@@ -230,10 +230,11 @@ serve(async (req) => {
     console.log('Parsing Google Gemini response...');
     console.log('Raw content from Gemini:', content.substring(0, 200));
     
+    let cleanedContent = ''; // Initialize cleanedContent outside try block
     let prospectsData;
     try {
       // Clean the content more thoroughly
-      let cleanedContent = content.trim();
+      cleanedContent = content.trim();
       
       // Remove markdown code blocks if present
       cleanedContent = cleanedContent.replace(/```json\s*/g, '').replace(/```\s*/g, '');
@@ -314,9 +315,11 @@ serve(async (req) => {
     } catch (parseError) {
       console.error('JSON parse error:', parseError.message);
       console.error('Content that failed to parse:', content.substring(0, 500) + '...');
-      console.error('Cleaned content length:', cleanedContent.length);
-      console.error('Cleaned content start:', cleanedContent.substring(0, 200));
-      console.error('Cleaned content end:', cleanedContent.substring(-200));
+      if (cleanedContent) {
+        console.error('Cleaned content length:', cleanedContent.length);
+        console.error('Cleaned content start:', cleanedContent.substring(0, 200));
+        console.error('Cleaned content end:', cleanedContent.substring(-200));
+      }
       
       // Try alternative parsing - extract complete objects manually
       try {

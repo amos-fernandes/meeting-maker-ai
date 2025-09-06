@@ -145,11 +145,7 @@ serve(async (req) => {
 
     console.log('Email templates prepared:', emails.length);
 
-    // Em uma integração real, aqui seria feita a chamada para serviço de e-mail
-    // Por exemplo: Resend, SendGrid, Amazon SES, etc.
-    
-    /*
-    // Exemplo com Resend (requer RESEND_API_KEY)
+    // Envio real de e-mails usando Resend
     const resendApiKey = Deno.env.get('RESEND_API_KEY');
     
     if (resendApiKey) {
@@ -162,7 +158,7 @@ serve(async (req) => {
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-              from: 'Consultoria Tributária <contato@suaempresa.com>',
+              from: 'Única Contábil <contato@unicacontabil.com>',
               to: [emailData.to],
               subject: emailData.subject,
               html: emailData.html
@@ -171,13 +167,16 @@ serve(async (req) => {
           
           if (emailResponse.ok) {
             console.log(`Email sent to ${emailData.empresa}`);
+          } else {
+            console.error(`Failed to send email to ${emailData.empresa}: ${await emailResponse.text()}`);
           }
         } catch (error) {
           console.error(`Failed to send email to ${emailData.empresa}:`, error);
         }
       }
+    } else {
+      console.warn('RESEND_API_KEY not configured - emails not sent');
     }
-    */
 
     // Log da atividade para demonstração
     console.log('Email Campaign Summary:');

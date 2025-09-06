@@ -72,7 +72,7 @@ serve(async (req) => {
         script.empresa.toLowerCase().includes(lead.empresa.toLowerCase())
       );
 
-      const phoneNumber = relatedLead?.telefone || '+55119999999'; // Número genérico para demonstração
+      const phoneNumber = relatedLead?.telefone || '5562981959829'; // Número de atendimento Única Contábil
       const contactName = relatedLead?.contato_decisor || '[Nome]';
       
       // Personalizar mensagem do WhatsApp baseada no roteiro de ligação
