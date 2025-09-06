@@ -374,6 +374,51 @@ export type Database = {
         }
         Relationships: []
       }
+      scheduled_meetings: {
+        Row: {
+          created_at: string | null
+          duration_minutes: number | null
+          id: string
+          lead_email: string
+          lead_id: string | null
+          lead_name: string
+          meeting_type: string | null
+          notes: string | null
+          scheduled_date: string
+          status: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          duration_minutes?: number | null
+          id?: string
+          lead_email: string
+          lead_id?: string | null
+          lead_name: string
+          meeting_type?: string | null
+          notes?: string | null
+          scheduled_date: string
+          status?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          duration_minutes?: number | null
+          id?: string
+          lead_email?: string
+          lead_id?: string | null
+          lead_name?: string
+          meeting_type?: string | null
+          notes?: string | null
+          scheduled_date?: string
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
