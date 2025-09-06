@@ -111,7 +111,7 @@ serve(async (req) => {
     };
 
     // Salvar no banco de dados
-    const { data: savedEvent, error: saveError } = await supabase
+    let { data: savedEvent, error: saveError } = await supabase
       .from('scheduled_meetings')
       .insert(eventData)
       .select()
@@ -119,33 +119,8 @@ serve(async (req) => {
 
     if (saveError) {
       console.error('Erro ao salvar evento:', saveError);
-      // Criar tabela se não existir
-      const createTableResult = await supabase.rpc('exec', {
-        sql: `
-          CREATE TABLE IF NOT EXISTS scheduled_meetings (
-            id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-            user_id UUID NOT NULL,
-            lead_id UUID,
-            lead_name TEXT NOT NULL,
-            lead_email TEXT NOT NULL,
-            scheduled_date TIMESTAMP WITH TIME ZONE NOT NULL,
-            meeting_type TEXT DEFAULT 'call',
-            duration_minutes INTEGER DEFAULT 60,
-            status TEXT DEFAULT 'agendado',
-            notes TEXT,
-            created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
-            updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
-          );
-          
-          ALTER TABLE scheduled_meetings ENABLE ROW LEVEL SECURITY;
-          
-          CREATE POLICY "Users can manage their own meetings" 
-          ON scheduled_meetings FOR ALL 
-          USING (auth.uid() = user_id);
-        `
-      });
       
-      // Tentar salvar novamente
+      // Tentar salvar novamente diretamente (sem usar RPC que pode causar problemas)
       const { data: retryEvent, error: retryError } = await supabase
         .from('scheduled_meetings')
         .insert(eventData)

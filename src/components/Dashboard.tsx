@@ -202,16 +202,6 @@ const Dashboard = () => {
             Sua ferramenta de IA para prospecção inteligente e agendamento automático de reuniões. 
             Conecte-se com prospects de forma mais eficiente e aumente suas conversões.
           </p>
-          <div className="flex gap-4">
-            <Button variant="secondary" className="bg-white text-primary hover:bg-white/90">
-              <Plus className="h-4 w-4 mr-2" />
-              Nova Campanha
-            </Button>
-            <Button variant="outline" className="border-white/20 text-white hover:bg-white/10">
-              <Bot className="h-4 w-4 mr-2" />
-              Chat com IA
-            </Button>
-          </div>
         </div>
         <div className="absolute inset-0 bg-gradient-to-r from-primary/90 to-primary-glow/90"></div>
       </div>
@@ -270,9 +260,9 @@ const Dashboard = () => {
           <CardContent>
             <div className="space-y-4">
               <div className="p-4 rounded-lg bg-gradient-success text-white">
-                <p className="text-sm font-medium mb-2">🤖 RAG + CRM Ativo</p>
+                <p className="text-sm font-medium mb-2">🤖 LEADOS Consultor Inteligente</p>
                 <p className="text-sm text-white/90">
-                  Chat inteligente com acesso à base de conhecimento e integração Salesforce para automação completa.
+                  LEADOS Consultor inteligente via WhatsApp.
                 </p>
               </div>
               <Button className="w-full" variant="outline">
