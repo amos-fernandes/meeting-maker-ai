@@ -1,7 +1,7 @@
 import { Navigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import Header from "@/components/Header";
+import LandingPage from "@/components/LandingPage";
 import Dashboard from "@/components/Dashboard";
 import RAGChat from "@/components/RAGChat";
 import CRMDashboard from "@/components/CRM/CRMDashboard";
@@ -28,13 +28,15 @@ const Index = () => {
     );
   }
 
+  // Se não há usuário, mostrar landing page
+  // Se não há usuário, mostrar landing page
   if (!user) {
-    return <Navigate to="/auth" replace />;
+    return <LandingPage />;
   }
 
+  // Se há usuário, mostrar o dashboard da aplicação
   return (
     <div className="min-h-screen bg-background">
-      <Header />
       <main className="container mx-auto px-6 py-8 space-y-8">
         <Dashboard />
         <CRMDashboard />

@@ -2,6 +2,9 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import StatsCard from "./StatsCard";
+import InAppCommunication from "./InAppCommunication";
+import UpgradeModal from "./UpgradeModal";
+import { useUserPlan } from "./UserPlanProvider";
 import { 
   Users, 
   Calendar, 
@@ -10,8 +13,9 @@ import {
   Phone, 
   Mail,
   MessageSquare,
-  Plus,
-  Bot
+  Bot,
+  Settings,
+  LogOut
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -19,7 +23,8 @@ import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 const Dashboard = () => {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
+  const userPlan = useUserPlan();
   const [dashboardStats, setDashboardStats] = useState({
     prospectsAtivos: 0,
     reunioesAgendadas: 0,
@@ -32,6 +37,7 @@ const Dashboard = () => {
   });
   const [recentActivities, setRecentActivities] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -194,13 +200,42 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-6">
-      {/* Hero Section */}
+      {/* Header with User Info */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Dashboard</h1>
+          <p className="text-muted-foreground">
+            Bem-vindo ao LEADOS AI Pro, {user?.email?.split('@')[0]}
+          </p>
+        </div>
+        <div className="flex items-center gap-4">
+          <Button variant="outline" size="sm">
+            <Settings className="h-4 w-4 mr-2" />
+            Configurações
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => signOut()}>
+            <LogOut className="h-4 w-4 mr-2" />
+            Sair
+          </Button>
+        </div>
+      </div>
+
+      {/* In-App Communication */}
+      <InAppCommunication
+        userPlan={userPlan.plan}
+        leadsUsed={userPlan.leadsUsed}
+        leadsLimit={userPlan.leadsLimit}
+        trialDaysLeft={userPlan.trialDaysLeft}
+        onUpgrade={() => setShowUpgradeModal(true)}
+      />
+
+      {/* Hero Section - Updated */}
       <div className="relative overflow-hidden bg-gradient-primary rounded-2xl p-8 text-white shadow-large">
         <div className="relative z-10">
-          <h2 className="text-3xl font-bold mb-2">Bem-vindo ao LEADOS AI Pro</h2>
+          <h2 className="text-3xl font-bold mb-2">LEADOS AI Pro</h2>
           <p className="text-white/80 mb-6 max-w-2xl">
             Sua ferramenta de IA para prospecção inteligente e agendamento automático de reuniões. 
-            Conecte-se com prospects de forma mais eficiente e aumente suas conversões.
+            Foque em fechar, não em procurar.
           </p>
         </div>
         <div className="absolute inset-0 bg-gradient-to-r from-primary/90 to-primary-glow/90"></div>
@@ -277,6 +312,13 @@ const Dashboard = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Upgrade Modal */}
+      <UpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        currentPlan={userPlan.plan}
+      />
     </div>
   );
 };
