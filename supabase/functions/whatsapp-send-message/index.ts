@@ -138,6 +138,7 @@ serve(async (req) => {
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
+    }
   } catch (error) {
     console.error('Error in whatsapp-send-message function:', error);
     return new Response(JSON.stringify({ 
