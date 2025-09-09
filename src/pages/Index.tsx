@@ -5,7 +5,7 @@ import LandingPage from "@/components/LandingPage";
 import Dashboard from "@/components/Dashboard";
 import RAGChat from "@/components/RAGChat";
 import CRMDashboard from "@/components/CRM/CRMDashboard";
-import WhatsAppInterface from "@/components/WhatsAppInterface";
+import WhatsAppBot from "@/components/WhatsAppBot";
 
 const Index = () => {
   const { user, loading } = useAuth();
@@ -40,7 +40,7 @@ const Index = () => {
       <main className="container mx-auto px-6 py-8 space-y-8">
         <Dashboard />
         <CRMDashboard />
-        {showWhatsApp ? <WhatsAppInterface /> : <RAGChat />}
+        {showWhatsApp ? <WhatsAppBot /> : <RAGChat />}
       </main>
     </div>
   );

@@ -597,6 +597,28 @@ Sempre responda de forma técnica, consultiva e com foco em gerar valor para gra
       }
     }
 
+    // Store interaction in knowledge base for training
+    try {
+      console.log('Storing interaction in knowledge base...');
+      const knowledgeEntry = {
+        user_id: userId,
+        content: `User Question: ${message} | AI Response: ${responseData.response}`,
+        generated_at: new Date().toISOString()
+      };
+      
+      const { data: insertResult, error: insertError } = await supabase
+        .from('campaign_knowledge')
+        .insert(knowledgeEntry);
+        
+      if (insertError) {
+        console.error('Knowledge base insert error:', insertError);
+      } else {
+        console.log('Interaction stored successfully in knowledge base');
+      }
+    } catch (error) {
+      console.error('Error storing interaction:', error);
+    }
+
     return new Response(JSON.stringify(responseData), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

@@ -78,7 +78,9 @@ serve(async (req) => {
       // Personalizar mensagem do WhatsApp baseada no roteiro de ligação
       const whatsappMessage = script.roteiro_ligacao
         .replace('[Nome]', contactName)
-        .replace('Bom dia', '📞 *Consultoria Tributária Premium*\n\nOlá');
+        .replace('Bom dia', '📞 *Única Contábil - Consultoria Tributária Premium*\n\nOlá')
+        .replace('[Agência]', 'Única Contábil')
+        .replace('Sou da [Agência]', 'Sou da Única Contábil');
 
       whatsappMessages.push({
         to: phoneNumber,
