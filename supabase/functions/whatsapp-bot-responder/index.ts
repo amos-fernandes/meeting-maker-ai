@@ -87,6 +87,25 @@ contato@unicacontabil.com
         generated_at: new Date().toISOString()
       });
 
+    // Enviar resposta de volta via WhatsApp (se configurado)
+    try {
+      const { error: sendError } = await supabase.functions.invoke('whatsapp-send-message', {
+        body: {
+          to: phoneNumber,
+          message: whatsappResponse,
+          userId: userId
+        }
+      });
+
+      if (sendError) {
+        console.error('Error sending WhatsApp response:', sendError);
+      } else {
+        console.log('WhatsApp response sent successfully');
+      }
+    } catch (sendingError) {
+      console.error('Error in sending WhatsApp response:', sendingError);
+    }
+
     console.log('WhatsApp bot response generated successfully');
 
     return new Response(JSON.stringify({ 

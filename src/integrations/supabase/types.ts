@@ -419,6 +419,78 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_config: {
+        Row: {
+          api_token: string | null
+          created_at: string
+          id: string
+          is_active: boolean | null
+          phone_number: string | null
+          updated_at: string
+          user_id: string
+          webhook_url: string | null
+        }
+        Insert: {
+          api_token?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          phone_number?: string | null
+          updated_at?: string
+          user_id: string
+          webhook_url?: string | null
+        }
+        Update: {
+          api_token?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          phone_number?: string | null
+          updated_at?: string
+          user_id?: string
+          webhook_url?: string | null
+        }
+        Relationships: []
+      }
+      whatsapp_messages: {
+        Row: {
+          created_at: string
+          id: string
+          message_content: string
+          message_type: string | null
+          phone_number: string
+          processed: boolean | null
+          response_sent: boolean | null
+          sender_name: string | null
+          timestamp: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message_content: string
+          message_type?: string | null
+          phone_number: string
+          processed?: boolean | null
+          response_sent?: boolean | null
+          sender_name?: string | null
+          timestamp?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message_content?: string
+          message_type?: string | null
+          phone_number?: string
+          processed?: boolean | null
+          response_sent?: boolean | null
+          sender_name?: string | null
+          timestamp?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

@@ -52,19 +52,13 @@ const WhatsAppBot = () => {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [isBotActive, setIsBotActive] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [incomingMessages, setIncomingMessages] = useState<string[]>([
-    "Olá! Gostaria de saber mais sobre consultoria tributária.",
-    "Qual o valor dos serviços?",
-    "Vocês atendem empresas de grande porte?",
-    "Como funciona a recuperação de créditos tributários?",
-    "Tenho interesse em agendar uma consultoria."
-  ]);
+  const [webhookUrl, setWebhookUrl] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (user && isBotActive) {
       loadInitialData();
-      setupBotSimulation();
+      setupRealTimeMonitoring();
     }
   }, [user, isBotActive]);
 
@@ -76,23 +70,35 @@ const WhatsAppBot = () => {
     if (!user) return;
 
     try {
-      // Mensagem inicial do bot
-      const welcomeMessage: WhatsAppMessage = {
-        id: 'bot-welcome',
-        from: 'bot',
-        to: 'system',
-        message: '🤖 *Bot Única Contábil Ativado*\n\nOlá! Sou o assistente virtual da Única Contábil. Estou aqui para ajudar com dúvidas sobre consultoria tributária, planejamento fiscal e serviços contábeis.\n\nComo posso te ajudar hoje?',
-        timestamp: new Date(),
-        type: 'outgoing',
-        status: 'sent'
-      };
+      // Configurar webhook URL
+      const projectRef = 'ibaonnnakuuerrgtilze';
+      const webhookEndpoint = `https://${projectRef}.functions.supabase.co/functions/v1/whatsapp-webhook`;
+      setWebhookUrl(webhookEndpoint);
 
-      setMessages([welcomeMessage]);
+      // Verificar/criar configuração do WhatsApp
+      const { data: existingConfig } = await supabase
+        .from('whatsapp_config')
+        .select('*')
+        .eq('user_id', user.id)
+        .limit(1);
+
+      if (!existingConfig || existingConfig.length === 0) {
+        await supabase
+          .from('whatsapp_config')
+          .insert({
+            user_id: user.id,
+            webhook_url: webhookEndpoint,
+            is_active: false
+          });
+      }
+
+      // Carregar mensagens existentes
+      await loadRealMessages();
 
       const initialActivity: WhatsAppActivity = {
         id: 'bot-start',
         type: 'bot_response',
-        description: 'Bot WhatsApp da Única Contábil ativado e funcionando',
+        description: 'Sistema WhatsApp da Única Contábil inicializado',
         timestamp: new Date(),
         status: 'success'
       };
@@ -103,56 +109,63 @@ const WhatsAppBot = () => {
     }
   };
 
-  const setupBotSimulation = () => {
-    // Simular mensagens recebidas a cada 30-60 segundos quando o bot está ativo
+  const setupRealTimeMonitoring = () => {
+    // Monitorar mensagens reais a cada 10 segundos
     const interval = setInterval(() => {
-      if (isBotActive && Math.random() > 0.6) {
-        receiveSimulatedMessage();
+      if (isBotActive) {
+        loadRealMessages();
       }
-    }, Math.random() * 30000 + 30000); // 30-60 segundos
+    }, 10000);
 
     return () => clearInterval(interval);
   };
 
-  const receiveSimulatedMessage = async () => {
-    const randomMessage = incomingMessages[Math.floor(Math.random() * incomingMessages.length)];
-    const clientNames = ['João Silva', 'Maria Santos', 'Carlos Oliveira', 'Ana Costa', 'Pedro Ferreira'];
-    const randomName = clientNames[Math.floor(Math.random() * clientNames.length)];
-    const randomPhone = `+5562${Math.floor(Math.random() * 900000000 + 100000000)}`;
+  const loadRealMessages = async () => {
+    if (!user) return;
 
-    // Mensagem recebida
-    const incomingMessage: WhatsAppMessage = {
-      id: `incoming-${Date.now()}`,
-      from: randomPhone,
-      to: '+5562981959829',
-      message: randomMessage,
-      timestamp: new Date(),
-      type: 'incoming',
-      status: 'read',
-      leadName: randomName,
-      phoneNumber: randomPhone
-    };
+    try {
+      const { data: whatsappMessages } = await supabase
+        .from('whatsapp_messages')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: true })
+        .limit(50);
 
-    setMessages(prev => [...prev, incomingMessage]);
+      if (whatsappMessages && whatsappMessages.length > 0) {
+        const convertedMessages: WhatsAppMessage[] = whatsappMessages.map(msg => ({
+          id: msg.id,
+          from: msg.phone_number,
+          to: '+5562981959829',
+          message: msg.message_content,
+          timestamp: new Date(msg.created_at),
+          type: 'incoming',
+          status: 'read',
+          leadName: msg.sender_name,
+          phoneNumber: msg.phone_number
+        }));
 
-    // Registrar atividade
-    const activity: WhatsAppActivity = {
-      id: `activity-${Date.now()}`,
-      type: 'message',
-      description: `Mensagem recebida de ${randomName} (${randomPhone})`,
-      timestamp: new Date(),
-      status: 'success'
-    };
+        setMessages(convertedMessages);
 
-    setActivities(prev => [activity, ...prev.slice(0, 19)]);
+        // Atualizar atividades baseadas nas mensagens reais
+        const newActivities: WhatsAppActivity[] = whatsappMessages.map(msg => ({
+          id: `real-${msg.id}`,
+          type: msg.response_sent ? 'bot_response' : 'message',
+          description: msg.response_sent 
+            ? `Bot respondeu para ${msg.sender_name}`
+            : `Mensagem recebida de ${msg.sender_name} (${msg.phone_number})`,
+          timestamp: new Date(msg.created_at),
+          status: 'success'
+        }));
 
-    // Armazenar na base de conhecimento
-    await storeInteractionInKnowledge(incomingMessage.message, 'incoming', randomName);
-
-    // Responder automaticamente com IA
-    setTimeout(() => {
-      respondWithAI(randomMessage, randomName, randomPhone);
-    }, 2000 + Math.random() * 3000); // 2-5 segundos para responder
+        setActivities(prev => {
+          const existingIds = prev.map(a => a.id);
+          const uniqueActivities = newActivities.filter(a => !existingIds.includes(a.id));
+          return [...uniqueActivities, ...prev].slice(0, 20);
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao carregar mensagens reais:', error);
+    }
   };
 
   const respondWithAI = async (userMessage: string, clientName: string, phoneNumber: string) => {
@@ -234,6 +247,19 @@ const WhatsAppBot = () => {
     setLoading(true);
 
     try {
+      // Enviar via WhatsApp API
+      const { data, error } = await supabase.functions.invoke('whatsapp-send-message', {
+        body: {
+          to: phoneNumber,
+          message: newMessage,
+          userId: user?.id
+        }
+      });
+
+      if (error) {
+        throw error;
+      }
+
       const sentMessage: WhatsAppMessage = {
         id: `manual-${Date.now()}`,
         from: '+5562981959829',
@@ -250,28 +276,79 @@ const WhatsAppBot = () => {
       const activity: WhatsAppActivity = {
         id: `manual-activity-${Date.now()}`,
         type: 'message',
-        description: `Mensagem manual enviada para ${phoneNumber}`,
+        description: `Mensagem enviada via WhatsApp para ${phoneNumber}`,
         timestamp: new Date(),
         status: 'success'
       };
 
       setActivities(prev => [activity, ...prev.slice(0, 19)]);
 
-      // Armazenar na base de conhecimento
-      await storeInteractionInKnowledge(newMessage, 'manual_outgoing');
-
       setNewMessage('');
       
       toast({
         title: "Sucesso",
-        description: "Mensagem enviada com sucesso!",
+        description: "Mensagem enviada via WhatsApp!",
       });
 
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error);
       toast({
         title: "Erro",
-        description: "Erro ao enviar mensagem",
+        description: "Erro ao enviar mensagem via WhatsApp",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const testWebhook = async () => {
+    if (!user) return;
+
+    setLoading(true);
+    try {
+      // Simular mensagem recebida para testar o sistema
+      const testMessage = {
+        user_id: user.id,
+        phone_number: '+5562999887766',
+        sender_name: 'Teste Cliente',
+        message_content: 'Olá! Gostaria de saber mais sobre seus serviços contábeis.',
+        message_type: 'text',
+        processed: false,
+        response_sent: false
+      };
+
+      const { error } = await supabase
+        .from('whatsapp_messages')
+        .insert(testMessage);
+
+      if (error) {
+        throw error;
+      }
+
+      // Chamar o bot responder
+      await supabase.functions.invoke('whatsapp-bot-responder', {
+        body: {
+          message: testMessage.message_content,
+          phoneNumber: testMessage.phone_number,
+          clientName: testMessage.sender_name,
+          userId: user.id
+        }
+      });
+
+      toast({
+        title: "Teste Executado",
+        description: "Mensagem de teste processada com sucesso!",
+      });
+
+      // Recarregar mensagens
+      await loadRealMessages();
+
+    } catch (error) {
+      console.error('Erro no teste:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao executar teste do webhook",
         variant: "destructive"
       });
     } finally {
@@ -301,21 +378,37 @@ const WhatsAppBot = () => {
     }
   };
 
-  const toggleBot = () => {
-    setIsBotActive(!isBotActive);
+  const toggleBot = async () => {
+    if (!user) return;
+
+    const newActiveState = !isBotActive;
+    setIsBotActive(newActiveState);
     
-    if (!isBotActive) {
+    try {
+      // Atualizar configuração no banco
+      await supabase
+        .from('whatsapp_config')
+        .update({ is_active: newActiveState })
+        .eq('user_id', user.id);
+
+      if (newActiveState) {
+        toast({
+          title: "Bot Ativado",
+          description: "Bot WhatsApp da Única Contábil está agora atendendo automaticamente mensagens reais",
+        });
+      } else {
+        toast({
+          title: "Bot Desativado",
+          description: "Bot WhatsApp foi desativado",
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar configuração:', error);
       toast({
-        title: "Bot Ativado",
-        description: "Bot WhatsApp da Única Contábil está agora atendendo automaticamente",
+        title: "Erro",
+        description: "Erro ao atualizar configuração do bot",
+        variant: "destructive"
       });
-    } else {
-      toast({
-        title: "Bot Desativado",
-        description: "Bot WhatsApp foi desativado",
-      });
-      setMessages([]);
-      setActivities([]);
     }
   };
 
@@ -358,7 +451,7 @@ const WhatsAppBot = () => {
                 {isBotActive ? "Bot está atendendo automaticamente" : "Bot desativado"}
               </p>
               <p className="text-sm text-muted-foreground">
-                {isBotActive ? "Respondendo mensagens com IA integrada" : "Clique para ativar o atendimento automático"}
+                {isBotActive ? "Respondendo mensagens reais via WhatsApp Business API" : "Clique para ativar o atendimento automático"}
               </p>
             </div>
             <Button 
@@ -396,6 +489,22 @@ const WhatsAppBot = () => {
               </div>
             </div>
           )}
+          
+          {/* Webhook Configuration */}
+          {isBotActive && webhookUrl && (
+            <div className="mt-4 p-4 bg-muted rounded-lg">
+              <h4 className="font-medium mb-2">Configuração do Webhook</h4>
+              <p className="text-sm text-muted-foreground mb-2">
+                Configure este URL no seu WhatsApp Business API:
+              </p>
+              <code className="block p-2 bg-background rounded text-xs break-all">
+                {webhookUrl}
+              </code>
+              <p className="text-xs text-muted-foreground mt-2">
+                Token de verificação: UNICA_CONTABIL_WEBHOOK_TOKEN
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -406,7 +515,10 @@ const WhatsAppBot = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Bot className="h-5 w-5 text-green-500" />
-                Conversas WhatsApp - Tempo Real
+                Mensagens WhatsApp Reais
+                <Badge variant="outline" className="ml-auto">
+                  {messages.length} mensagens
+                </Badge>
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
@@ -443,6 +555,10 @@ const WhatsAppBot = () => {
               </ScrollArea>
               <Separator />
               <div className="p-4 space-y-3">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Activity className="h-4 w-4" />
+                  <span>Mensagens reais do WhatsApp Business API</span>
+                </div>
                 <Input
                   value={phoneNumber}
                   onChange={(e) => setPhoneNumber(e.target.value)}
@@ -452,13 +568,34 @@ const WhatsAppBot = () => {
                   <Input
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
-                    placeholder="Enviar mensagem manual..."
+                    placeholder="Enviar mensagem via WhatsApp API..."
                     onKeyPress={(e) => e.key === 'Enter' && sendManualMessage()}
                   />
                   <Button onClick={sendManualMessage} disabled={loading}>
                     <Send className="h-4 w-4" />
                   </Button>
                 </div>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={testWebhook}
+                    disabled={loading}
+                  >
+                    Testar Webhook
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => loadRealMessages()}
+                    disabled={loading}
+                  >
+                    Atualizar Mensagens
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  * Requer configuração do WhatsApp Business API
+                </p>
               </div>
             </CardContent>
           </Card>
