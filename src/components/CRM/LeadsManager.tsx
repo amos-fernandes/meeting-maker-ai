@@ -17,8 +17,10 @@ import {
   Building2,
   Mail,
   Phone,
-  Globe
+  Globe,
+  Upload
 } from "lucide-react";
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -59,6 +61,10 @@ const LeadsManager = ({ onStatsUpdate }: LeadsManagerProps) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [importing, setImporting] = useState(false);
+  
+  const LEADS_PER_PAGE = 10;
 
   const form = useForm<LeadFormData>({
     resolver: zodResolver(leadSchema),
@@ -110,7 +116,6 @@ const LeadsManager = ({ onStatsUpdate }: LeadsManagerProps) => {
       setLoading(true);
 
       if (editingLead) {
-        // Atualizar lead existente
         const { error } = await supabase
           .from('leads')
           .update(data)
@@ -120,7 +125,6 @@ const LeadsManager = ({ onStatsUpdate }: LeadsManagerProps) => {
         if (error) throw error;
         toast.success('Lead atualizado com sucesso!');
       } else {
-        // Criar novo lead
         const { error } = await supabase
           .from('leads')
           .insert({ 
@@ -177,11 +181,134 @@ const LeadsManager = ({ onStatsUpdate }: LeadsManagerProps) => {
     toast.success('Leads exportados com sucesso!');
   };
 
+  const standardizeRegime = (regime: string) => {
+    const regimeMap: { [key: string]: string } = {
+      'Lucro Real': 'lucro_real',
+      'Real': 'lucro_real', 
+      'Lucro Presumido': 'lucro_presumido',
+      'Presumido': 'lucro_presumido',
+      'Simples Nacional': 'simples_nacional',
+      'Simples': 'simples_nacional'
+    };
+    return regimeMap[regime] || 'lucro_presumido';
+  };
+
+  const generateProspectingHook = (empresa: string, setor: string, regime: string) => {
+    const hooks = {
+      'odontol': 'Gestão de folha de pagamento para dentistas e colaboradores. Otimização fiscal e compliance para clínicas.',
+      'constru': 'Complexidade na apuração de impostos sobre construção civil. Gestão de projetos e controle orçamentário.',
+      'transport': 'Otimização de ICMS sobre serviços de transporte. Gestão de frota e controle de custos operacionais.',
+      'aliment': 'Complexidade na apuração de ICMS-ST em produtos alimentícios. Alto volume de transações diárias.',
+      'educa': 'Gestão de folha de pagamento para professores. Otimização da carga tributária sobre receitas de mensalidades.',
+      'saude': 'Apuração de impostos sobre serviços médicos. Gestão de folha de pagamento especializada.',
+      'tecnologia': 'Alta carga tributária sobre serviços de TI. Necessidade de controle fiscal robusto.',
+      'advocacia': 'Complexidade dos regimes tributários para sociedades de advogados. Alta carga sobre honorários.',
+      'default': 'Oportunidade de otimização tributária e planejamento fiscal estratégico.'
+    };
+    
+    const key = Object.keys(hooks).find(k => 
+      setor.toLowerCase().includes(k) || 
+      empresa.toLowerCase().includes(k)
+    ) || 'default';
+    
+    return hooks[key];
+  };
+
+  const importLeads = async (leadsData: any[]) => {
+    if (!user) return;
+    
+    const { error } = await supabase
+      .from('leads')
+      .insert(leadsData.map(lead => ({ ...lead, user_id: user.id })));
+      
+    if (error) throw error;
+    
+    loadLeads();
+    onStatsUpdate();
+  };
+
+  const handleFileImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const text = e.target?.result as string;
+      
+      const isTabSeparated = text.includes('\t');
+      const separator = isTabSeparated ? '\t' : ',';
+      
+      const lines = text.split('\n').filter(line => line.trim());
+      const newLeads = [];
+      
+      for (const line of lines) {
+        const columns = line.split(separator);
+        
+        if (columns.length < 2) continue;
+        
+        let leadData;
+        
+        if (isTabSeparated) {
+          leadData = {
+            empresa: columns[0]?.trim() || '',
+            setor: columns[4]?.trim() || '',
+            regime_tributario: standardizeRegime(columns[2]?.trim() || ''),
+            contato_decisor: columns[7]?.trim() || '',
+            telefone: columns[8]?.trim() === '-' ? '' : columns[8]?.trim() || '',
+            email: columns[9]?.trim() === '-' ? '' : columns[9]?.trim() || '',
+            status: columns[5]?.toLowerCase().includes('ativa') ? 'ativo' : 'inativo',
+            gancho_prospeccao: generateProspectingHook(columns[0]?.trim() || '', columns[4]?.trim() || '', columns[2]?.trim() || '')
+          };
+        } else {
+          leadData = {
+            empresa: columns[1]?.trim() || '',
+            setor: columns[2]?.trim() || '',
+            regime_tributario: standardizeRegime(columns[7]?.trim() || ''),
+            contato_decisor: columns[8]?.trim() || '',
+            telefone: columns[4]?.trim() || '',
+            email: columns[5]?.trim() || '',
+            cnae: columns[6]?.trim() || '',
+            gancho_prospeccao: columns[9]?.trim() || '',
+            qualification_score: columns[0]?.trim() || '',
+            notes: `Qualificação: ${columns[0]?.trim() || 'N/A'}. CNPJ: ${columns[3]?.trim() || 'N/A'}`
+          };
+        }
+        
+        const exists = leads.some(lead => 
+          lead.empresa.toLowerCase() === leadData.empresa.toLowerCase()
+        );
+        
+        if (!exists && leadData.empresa) {
+          newLeads.push(leadData);
+        }
+      }
+      
+      if (newLeads.length > 0) {
+        await importLeads(newLeads);
+        toast.success(`${newLeads.length} leads importados com sucesso!`);
+      } else {
+        toast.error('Nenhum lead novo encontrado para importar');
+      }
+    };
+    
+    reader.readAsText(file);
+    event.target.value = '';
+  };
+
   const filteredLeads = leads.filter(lead =>
     lead.empresa.toLowerCase().includes(searchTerm.toLowerCase()) ||
     lead.setor?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     lead.contato_decisor?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+  
+  const totalPages = Math.ceil(filteredLeads.length / LEADS_PER_PAGE);
+  const startIndex = (currentPage - 1) * LEADS_PER_PAGE;
+  const endIndex = startIndex + LEADS_PER_PAGE;
+  const paginatedLeads = filteredLeads.slice(startIndex, endIndex);
+  
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -202,6 +329,17 @@ const LeadsManager = ({ onStatsUpdate }: LeadsManagerProps) => {
             Gerenciar Leads
           </CardTitle>
           <div className="flex gap-2">
+            <input
+              type="file"
+              accept=".csv,.txt"
+              onChange={handleFileImport}
+              style={{ display: 'none' }}
+              id="file-input"
+            />
+            <Button variant="outline" onClick={() => document.getElementById('file-input')?.click()}>
+              <Upload className="h-4 w-4 mr-2" />
+              Abrir
+            </Button>
             <Button variant="outline" onClick={handleExport} disabled={leads.length === 0}>
               <Download className="h-4 w-4 mr-2" />
               Exportar CSV
@@ -447,7 +585,7 @@ const LeadsManager = ({ onStatsUpdate }: LeadsManagerProps) => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredLeads.map((lead) => (
+              {paginatedLeads.map((lead) => (
                 <TableRow key={lead.id}>
                   <TableCell className="font-medium">
                     <div>
@@ -513,11 +651,56 @@ const LeadsManager = ({ onStatsUpdate }: LeadsManagerProps) => {
             </TableBody>
           </Table>
           
+          {paginatedLeads.length === 0 && filteredLeads.length > 0 && (
+            <div className="text-center py-8 text-muted-foreground">
+              Nenhum lead nesta página
+            </div>
+          )}
+          
           {filteredLeads.length === 0 && (
             <div className="text-center py-8 text-muted-foreground">
               {searchTerm ? 'Nenhum lead encontrado com esse termo' : 'Nenhum lead cadastrado'}
             </div>
           )}
+        </div>
+        
+        {totalPages > 1 && (
+          <div className="mt-4 flex justify-center">
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious 
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                  />
+                </PaginationItem>
+                
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                  <PaginationItem key={page}>
+                    <PaginationLink
+                      onClick={() => setCurrentPage(page)}
+                      isActive={currentPage === page}
+                      className="cursor-pointer"
+                    >
+                      {page}
+                    </PaginationLink>
+                  </PaginationItem>
+                ))}
+                
+                <PaginationItem>
+                  <PaginationNext 
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </div>
+        )}
+        
+        <div className="mt-4 text-sm text-muted-foreground text-center">
+          Mostrando {startIndex + 1}-{Math.min(endIndex, filteredLeads.length)} de {filteredLeads.length} leads
+          {filteredLeads.length !== leads.length && ` (${leads.length} no total)`}
         </div>
       </CardContent>
     </Card>

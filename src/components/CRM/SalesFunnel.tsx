@@ -12,7 +12,8 @@ import {
   TrendingUp,
   Plus,
   Search,
-  ArrowRight
+  ArrowRight,
+  Send
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -93,62 +94,43 @@ const SalesFunnel = ({ onStatsUpdate }: SalesFunnelProps) => {
     }
   };
 
-  const createAutoLeadCampaign = async () => {
+  const createAutoLeadCampaign = async (e?: React.MouseEvent) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+    
+    console.log('🔵 createAutoLeadCampaign called');
     if (!user) return;
 
     try {
       setLoading(true);
       
-      // Importar leads da base de conhecimento
-      const { TARGETS } = await import("@/data/knowledgeBase");
-      
-      let addedCount = 0;
-      
-      for (const target of TARGETS) {
-        // Verificar se já existe
-        const { data: existing } = await supabase
-          .from('leads')
-          .select('id')
-          .eq('user_id', user.id)
-          .eq('empresa', target.empresa)
-          .single();
+      // Usar função de geração de prospects da IA
+      const { data, error } = await supabase.functions.invoke('generate-prospects', {
+        body: { userId: user.id }
+      });
 
-        if (!existing) {
-          // Criar novo lead
-          const { error } = await supabase
-            .from('leads')
-            .insert({
-              user_id: user.id,
-              empresa: target.empresa,
-              setor: target.setor,
-              cnae: target.cnae,
-              regime_tributario: target.regime_tributario,
-              contato_decisor: target.contato_decisor,
-              telefone: target.telefone,
-              email: target.email,
-              website: target.website,
-              gancho_prospeccao: target.gancho_prospeccao,
-              status: 'novo'
-            });
+      if (error) throw error;
 
-          if (!error) {
-            addedCount++;
-          }
-        }
+      if (data.success) {
+        toast.success(data.message);
+        loadFunnelStats();
+        onStatsUpdate();
+      } else {
+        throw new Error(data.error);
       }
-
-      toast.success(`Campanha criada! ${addedCount} novos leads adicionados da base de conhecimento.`);
-      loadFunnelStats();
-      onStatsUpdate();
     } catch (error) {
-      console.error('Erro ao criar campanha:', error);
-      toast.error('Erro ao criar campanha');
+      console.error('Erro ao criar leads:', error);
+      toast.error('Erro ao criar leads');
     } finally {
       setLoading(false);
     }
   };
 
-  const qualifyLeadsAutomatically = async () => {
+  const qualifyLeadsAutomatically = async (e?: React.MouseEvent) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+    
+    console.log('🟡 qualifyLeadsAutomatically called');
     if (!user) return;
 
     try {
@@ -220,18 +202,20 @@ const SalesFunnel = ({ onStatsUpdate }: SalesFunnelProps) => {
           <div className="flex gap-2">
             <Button 
               variant="outline" 
-              onClick={qualifyLeadsAutomatically}
+              onClick={(e) => qualifyLeadsAutomatically(e)}
               disabled={loading}
+              type="button"
             >
               <Target className="h-4 w-4 mr-2" />
               Qualificar Leads
             </Button>
             <Button 
-              onClick={createAutoLeadCampaign}
+              onClick={(e) => createAutoLeadCampaign(e)}
               disabled={loading}
+              type="button"
             >
               <Plus className="h-4 w-4 mr-2" />
-              Nova Campanha CRM
+              Criar Leads
             </Button>
           </div>
         </div>
