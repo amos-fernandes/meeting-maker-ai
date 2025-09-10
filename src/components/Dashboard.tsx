@@ -239,7 +239,6 @@ const Dashboard = () => {
             Sua ferramenta de IA para prospecção inteligente e agendamento automático de reuniões. 
             Foque em fechar, não em procurar.
           </p>
-
         </div>
         <div className="absolute inset-0 bg-gradient-to-r from-primary/90 to-primary-glow/90"></div>
       </div>
