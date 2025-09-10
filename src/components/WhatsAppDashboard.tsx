@@ -5,6 +5,9 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, MessageCircle, Users, Activity, Bot, TrendingUp, Target } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import WhatsAppConfig from "./WhatsAppConfig";
+import WhatsAppSetupGuide from "./WhatsAppSetupGuide";
+import RAGChat from "./RAGChat";
 
 interface WhatsAppDashboardProps {
   onGoBack: () => void;
@@ -174,6 +177,46 @@ const WhatsAppDashboard = ({ onGoBack }: WhatsAppDashboardProps) => {
           />
         </div>
 
+        {/* WhatsApp Configuration Section */}
+        <WhatsAppSetupGuide />
+        
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <WhatsAppConfig />
+          
+          <Card className="shadow-soft">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MessageCircle className="h-5 w-5 text-primary" />
+                Status WhatsApp Bot
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Status</span>
+                  <span className="text-sm font-medium">Configuração necessária</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Mensagens enviadas hoje</span>
+                  <span className="text-sm font-medium">0</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Webhook</span>
+                  <span className="text-sm font-medium text-orange-600">Não configurado</span>
+                </div>
+                <Button 
+                  className="w-full" 
+                  variant="outline"
+                  onClick={() => window.dispatchEvent(new CustomEvent('openWhatsAppBot'))}
+                >
+                  <Bot className="h-4 w-4 mr-2" />
+                  Gerenciar Bot WhatsApp
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* WhatsApp Bot - Conversa */}
@@ -209,26 +252,16 @@ const WhatsAppDashboard = ({ onGoBack }: WhatsAppDashboardProps) => {
             </CardContent>
           </Card>
 
-          {/* RAG Assistant IA */}
+          {/* Bot WhatsApp Única Contábil - RAG Assistant IA */}
           <Card className="shadow-soft">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Bot className="h-5 w-5 text-accent" />
-                RAG Assistant IA
+                Bot WhatsApp Única Contábil
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8">
-                <Bot className="h-16 w-16 text-accent/50 mx-auto mb-4" />
-                <p className="text-lg font-medium mb-2">Assistente IA Integrado</p>
-                <p className="text-muted-foreground mb-4">
-                  Sistema RAG para consultas inteligentes e geração de respostas automáticas
-                </p>
-                <Button variant="outline">
-                  <Bot className="h-4 w-4 mr-2" />
-                  Acessar Chat IA
-                </Button>
-              </div>
+              <RAGChat />
             </CardContent>
           </Card>
         </div>

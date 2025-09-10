@@ -4,8 +4,6 @@ import { Button } from "@/components/ui/button";
 import StatsCard from "./StatsCard";
 import InAppCommunication from "./InAppCommunication";
 import UpgradeModal from "./UpgradeModal";
-import WhatsAppConfig from "./WhatsAppConfig";
-import WhatsAppSetupGuide from "./WhatsAppSetupGuide";
 import { useUserPlan } from "./UserPlanProvider";
 import { 
   Users, 
@@ -315,45 +313,6 @@ const Dashboard = () => {
         </Card>
       </div>
 
-      {/* WhatsApp Configuration Section */}
-      <WhatsAppSetupGuide />
-      
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <WhatsAppConfig />
-        
-        <Card className="shadow-soft">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <MessageSquare className="h-5 w-5 text-primary" />
-              Status WhatsApp Bot
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Status</span>
-                <span className="text-sm font-medium">Configuração necessária</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Mensagens enviadas hoje</span>
-                <span className="text-sm font-medium">0</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Webhook</span>
-                <span className="text-sm font-medium text-orange-600">Não configurado</span>
-              </div>
-              <Button 
-                className="w-full" 
-                variant="outline"
-                onClick={() => window.dispatchEvent(new CustomEvent('openWhatsAppBot'))}
-              >
-                <Bot className="h-4 w-4 mr-2" />
-                Gerenciar Bot WhatsApp
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
 
       {/* Upgrade Modal */}
       <UpgradeModal
