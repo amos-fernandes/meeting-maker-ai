@@ -305,7 +305,7 @@ const Dashboard = () => {
               <Button 
                 className="w-full" 
                 variant="outline"
-                onClick={() => window.dispatchEvent(new CustomEvent('openWhatsAppBot'))}
+                onClick={() => window.dispatchEvent(new CustomEvent('openWhatsAppDashboard'))}
               >
                 <MessageSquare className="h-4 w-4 mr-2" />
                 Iniciar Atendimento WhatsApp
