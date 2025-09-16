@@ -16,7 +16,7 @@ import {
   Mail,
   Building2
 } from "lucide-react";
-import { performRAGSearch, TARGETS } from "@/data/knowledgeBase";
+import { performRAGSearch } from "@/data/knowledgeBase";
 import { saveLeadToCSV } from "@/utils/csvExport";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -40,7 +40,7 @@ const RAGChat = () => {
     {
       id: '1',
       type: 'ai',
-      content: 'Olá! Sou seu assistente SDR com IA. Posso ajudar com prospecção, análise de leads e integração com Salesforce. Como posso ajudá-lo hoje?',
+      content: 'Olá! Sou seu assistente LEADOS com IA. Posso ajudar com prospecção, análise de leads e integração com Salesforce. Como posso ajudá-lo hoje?',
       timestamp: new Date(),
       sources: ['knowledge_base', 'crm_integration']
     }
@@ -102,8 +102,15 @@ const RAGChat = () => {
         }
       });
 
+      console.log('RAG function response:', { data, error });
+
       if (error) {
+        console.error('Supabase function invoke error:', error);
         throw new Error(error.message);
+      }
+
+      if (!data) {
+        throw new Error('Nenhuma resposta recebida da função');
       }
 
       const response = data.response || "Desculpe, não consegui processar sua solicitação.";
@@ -218,7 +225,7 @@ const RAGChat = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Bot className="h-5 w-5 text-accent" />
-            Chat RAG - Assistente SDR IA
+            Chat RAG - Assistente LEADOS IA
             <Badge variant="outline" className="ml-auto">
               <Database className="h-3 w-3 mr-1" />
               RAG Ativo
@@ -311,7 +318,7 @@ const RAGChat = () => {
               </Button>
             </div>
             <p className="text-xs text-muted-foreground mt-2">
-              💡 Experimente: "Criar prospects", "Qualificar leads", "Criar campanhas", "Analisar pipeline"
+              💡 Experimente: "Criar prospects", "Agendar ligação", "Gerar proposta", "Criar conteúdo LinkedIn", "Falar com humano"
             </p>
           </div>
         </CardContent>

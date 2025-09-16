@@ -12,7 +12,7 @@ const Header = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-              SDR AI Pro
+              LEADOS AI Pro
             </h1>
             <div className="hidden md:flex items-center space-x-1 text-sm text-muted-foreground">
               <span>•</span>
@@ -21,6 +21,7 @@ const Header = () => {
           </div>
           
           <div className="flex items-center space-x-4">
+            
             <span className="hidden md:block text-sm text-muted-foreground">
               {user?.email}
             </span>

@@ -2,7 +2,8 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+// Usando a chave de API do Google Gemini
+const googleGeminiApiKey = Deno.env.get('GOOGLE_GEMINI_API_KEY');
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
@@ -30,7 +31,7 @@ serve(async (req) => {
     if (leadIds && leadIds.length > 0) {
       leadsQuery = leadsQuery.in('id', leadIds);
     } else {
-      leadsQuery = leadsQuery.is('status', 'novo').limit(10);
+      leadsQuery = leadsQuery.eq('status', 'novo').limit(10);
     }
     
     const { data: leads, error: fetchError } = await leadsQuery;
@@ -51,26 +52,56 @@ serve(async (req) => {
     const qualifiedLeads = [];
 
     for (const lead of leads) {
+      if (!googleGeminiApiKey) {
+        console.error('Google Gemini API key não configurada. Pulando qualificação.');
+        continue;
+      }
+      
       const prompt = `
-      Você é um especialista em qualificação de leads B2B para consultoria tributária.
+     
+Você é um especialista em qualificação de leads B2B para consultoria tributária.
+Analise a seguinte empresa, utilizando fontes de dados públicas e auditáveis, e gere um relatório de qualificação completo e acionável com base nos seguintes dados de entrada:
+
+    Empresa: ${lead.empresa}
+
+    Setor: ${lead.setor}
+
+    CNAE: ${lead.cnae}
+
+    Regime Tributário: ${lead.regime_tributario}
+
+    Contato Decisor: ${lead.contato_decisor}
+
+Tarefas e Fontes de Dados
+
+    Análise de Notícias e Eventos:
+
+        Pesquise eventos corporativos dos últimos 12 meses (fusões, aquisições, investimentos, expansões, IPOs, etc.) em veículos de imprensa de negócios e no Diário Oficial.
+
+        Busque por balanços financeiros públicos e notícias sobre resultados que possam indicar uma alta carga tributária, perdas recorrentes ou problemas de fluxo de caixa.
+
+        Identifique eventuais autuações fiscais, problemas de compliance ou mudanças regulatórias que afetam diretamente a empresa ou o setor.
+
+    Identificação de Dores e Oportunidades:
+
+        Com base no CNAE e no regime tributário, detalhe os desafios tributários específicos mais comuns para o setor. Foque em impostos complexos como ICMS, PIS/COFINS, IRPJ/CSLL, ou em questões de incentivos fiscais e regimes especiais.
+
+        Relacione as notícias encontradas a uma dor ou oportunidade tributária concreta. Por exemplo:
+
+            Anúncio de expansão -> Oportunidade para otimização do ICMS e aproveitamento de créditos.
+
+            Balanço com alta carga tributária -> Dor de ineficiência fiscal.
+
+            Fusão -> Necessidade de due diligence tributária.
+
+    Avaliação e Priorização Estratégica:
+
+        Atribua uma pontuação de qualificação (Score) de 1 a 5, onde 5 representa a mais alta prioridade e 1 a mais baixa. Justifique a pontuação com base nas dores e oportunidades identificadas.
+
+        Defina um nível de urgência (Alta, Média, Baixa) para a abordagem, considerando a relevância e o prazo dos eventos recentes.
+
       
-      Analise a seguinte empresa e qualifique com base nos critérios:
-      - Empresa: ${lead.empresa}
-      - Setor: ${lead.setor}
-      - CNAE: ${lead.cnae}
-      - Regime Tributário: ${lead.regime_tributario}
-      - Contato: ${lead.contato_decisor}
-      
-      Tarefas:
-      1. Pesquise notícias recentes (últimos 6 meses) sobre a empresa
-      2. Identifique desafios tributários específicos do setor
-      3. Avalie o potencial de necessidade de consultoria tributária
-      4. Atribua uma nota de qualificação:
-         - A: Alta prioridade (notícias recentes relevantes, grande potencial)
-         - B: Boa prioridade (bom potencial, setor propício)
-         - C: Baixa prioridade (menor urgência)
-      
-      Retorne APENAS um JSON válido:
+      Retorne APENAS um JSON válido no seguinte formato:
       {
         "qualificationScore": "A",
         "urgencyLevel": "Alta",
@@ -81,36 +112,69 @@ serve(async (req) => {
       }`;
 
       try {
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${googleGeminiApiKey}`, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${openAIApiKey}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: 'gpt-4o',
-            messages: [
-              { role: 'system', content: 'Você é um qualificador de leads especialista em tributação. Sempre retorne JSON válido.' },
-              { role: 'user', content: prompt }
+            contents: [
+              {
+                parts: [
+                  {
+                    text: prompt
+                  }
+                ]
+              }
             ],
-            max_tokens: 1000,
-            temperature: 0.3
+            generationConfig: {
+              temperature: 0.3
+            }
           }),
         });
 
         if (!response.ok) {
-          console.error(`OpenAI API error for lead ${lead.id}: ${response.statusText}`);
+          if (response.status === 429) {
+            console.error(`Limite de requisições do Google Gemini atingido para lead ${lead.id}. Pulando...`);
+            continue;
+          }
+          console.error(`Google Gemini API error for lead ${lead.id}: ${response.statusText}`);
           continue;
         }
 
         const data = await response.json();
-        const content = data.choices[0].message.content;
+        
+        let content = '';
+        if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0]) {
+          content = data.candidates[0].content.parts[0].text;
+        } else {
+          console.error(`Resposta inválida da IA para lead ${lead.id}. Estrutura de dados inesperada.`);
+          continue;
+        }
         
         let qualificationData;
         try {
-          qualificationData = JSON.parse(content);
+          // Clean the content more thoroughly
+          let cleanedContent = content.trim();
+          if (cleanedContent.startsWith('```json')) {
+            cleanedContent = cleanedContent.replace(/```json\n?/g, '');
+          }
+          if (cleanedContent.endsWith('```')) {
+            cleanedContent = cleanedContent.replace(/\n?```$/g, '');
+          }
+          
+          // Find the JSON object in the response
+          const jsonStart = cleanedContent.indexOf('{');
+          const jsonEnd = cleanedContent.lastIndexOf('}');
+          
+          if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+            cleanedContent = cleanedContent.substring(jsonStart, jsonEnd + 1);
+          }
+          
+          qualificationData = JSON.parse(cleanedContent);
         } catch (parseError) {
           console.error(`JSON parse error for lead ${lead.id}:`, parseError);
+          console.error(`Content that failed to parse for lead ${lead.id}:`, content.substring(0, 200));
           continue;
         }
 
@@ -119,7 +183,12 @@ serve(async (req) => {
           .from('leads')
           .update({
             status: 'qualificado',
-            ...qualificationData
+            qualificationScore: qualificationData.qualificationScore,
+            urgencyLevel: qualificationData.urgencyLevel,
+            notes: qualificationData.notes,
+            bestContactTime: qualificationData.bestContactTime,
+            approach_strategy: qualificationData.approachStrategy,
+            estimatedRevenue: qualificationData.estimatedRevenue,
           })
           .eq('id', lead.id);
 
