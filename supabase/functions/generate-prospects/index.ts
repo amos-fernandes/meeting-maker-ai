@@ -74,117 +74,72 @@ serve(async (req) => {
     }
 
     const prompt = `
-    Você é um especialista em inteligência de mercado focado em prospecção B2B para uma analise contábil e tributária especializada em medias empresas na cidade de goiania, estado de Goias.
+    Você é um especialista em abertura de conta PJ digital C6 Bank via escritório autorizado Infinity, focado em prospecção B2B nacional.
 
-    Sua tarefa é identificar EXATAMENTE 50 prospects de alto potencial nas seguintes áreas:
+    OBJETIVO: Identificar EXATAMENTE 30 prospects com CNPJ ativo (EXCLUIR MEI e terceiro setor).
 
-        Comércio e Varejo (bebidas, açougues, vestuários, restaurante e similares)
+    FOCO: Todo e qualquer setor com CNPJ ativo nacional, priorizando:
+    - Comércio e Varejo
+    - E-commerce e Marketplaces  
+    - Saúde e Educação
+    - Serviços Profissionais
+    - Indústria e Manufatura
+    - Tecnologia e Startups
+    - Construção Civil
+    - Logística e Transportes
 
-        E-commerce e Marketplaces
+    CRITÉRIOS BANT ADAPTADOS:
+    - Budget: Sem exigência de faturamento mínimo
+    - Authority: OBRIGATÓRIO ser dono ou sócio (decisor)
+    - Need: Necessidade de redução de custos bancários ou crédito
+    - Timing: Interesse imediato em abertura de conta
 
-        Saúde e Educação (Clínicas, consultorios, Cursos)
+    Para cada prospect, gere:
 
-        Drogarias e Farmacias
+    1. CNPJ (formato válido)
+    2. Nome real da empresa 
+    3. Setor de atuação
+    4. CNAE principal
+    5. Nome e cargo do DECISOR (dono/sócio obrigatório)
+    6. Telefone comercial
+    7. E-mail corporativo
+    8. Website oficial
+    9. Gancho de prospecção focado em BENEFÍCIOS C6 BANK:
 
-        Transportes e Logística
+    GANCHOS ESPECÍFICOS PARA C6 BANK PJ:
+    - Custos elevados com Pix (C6 oferece Pix ilimitado gratuito)
+    - Custos com TEDs (C6 oferece 100 TEDs gratuitos)
+    - Custos com boletos (C6 oferece 100 boletos gratuitos)
+    - Necessidade de crédito empresarial (C6 oferece análise de crédito)
+    - Busca por atendimento humano + digital (escritório autorizado)
+    - Empresas em expansão que precisam agilidade bancária
 
-    Profissionais Liberais e Prestadores de Serviços ( Médicos, dentistas, advogados, engenheiros, arquitetos).
+    FONTES AUDITÁVEIS OBRIGATÓRIAS:
+    - Receita Federal (CNPJ ativo)
+    - Juntas Comerciais  
+    - Sites oficiais das empresas
+    - Dados públicos verificáveis
 
-    Para cada prospect, você deve gerar as seguintes informações:
-
-        CNPJ
-
-        Nome real da empresa
-
-        Setor de atuação
-
-        CNAE principal
-
-        Regime tributário provável (Simples nacional, Lucro Real ou Presumido)
-
-        Nome e cargo do decisor (Ex: Sócio, CEO, CFO, Diretor, Gerente geral)
-
-        E-mail corporativo (formato nome.sobrenome@empresa.com.br)
-
-        Telefone comercial
-
-        Telefone pessoal do tomador de decisões
-
-        Website oficial
-
-        Gancho de prospecção (Este é o ponto crucial. O gancho deve ser embasado em dados públicos e auditáveis que revelem uma dor ou oportunidade real para a empresa, como:
-
-            Fiscal/Contábil: Mudanças recentes em regimes especiais de tributação (ex: ICMS), autuações fiscais (conforme notícias ou processos públicos), incentivos fiscais expirando ou mal utilizados.
-
-          Crescimento acelerado sem gestão para tomada de decisão
-
-          Controle de vendas interestaduais (difal de ICMS).
-
-
-            Financeiro: Publicação de balanços financeiros que mostram alta carga tributária, perdas recorrentes, ou margens de lucro apertadas.
-
-            Alto volume de pagamentos e recebimentos.
-
-            Gestão de folha, encargos trabalhistas e benefícios.
-
-              Regras específicas de incentivos fiscais.
-
-
-            Operacional/Estratégico: Anúncio de fusões e aquisições, expansão para novos estados, necessidade de recuperação judicial, ou entrada em um novo mercado que exige uma reestruturação tributária.
-
-          Complexidade na apuração de impostos sobre produção.
-
-          Gestão de créditos de ICMS, IPI e regimes especiais.
-
-            Controle de custos e estoques.
-
-            Grande volume de notas fiscais e transações diárias.
-
-            Apuração de ICMS, PIS, COFINS e substituição tributária.
-
-            Necessidade de planejamento tributário para reduzir custos   
-
-
-        Regulatório: Requisitos de compliance complexos ou problemas com órgãos reguladores (ex: ANVISA para farmacêuticas, ANP para energia).
-
-        A prospecção deve ser baseada em fontes confiáveis como:
-
-            Diário Oficial da União/Estado
-
-            Balanços e demonstrações financeiras publicadas
-
-            Notícias de veículos de imprensa confiáveis sobre M&A, expansões ou problemas fiscais
-
-            Comunicados de órgãos reguladores
-
-            Juntas Comerciais
-
-          Cartório de Registro Civil de Pessoas Jurídicas
-
-          Receita Federal
-
-          Prefeitura Municipal
-
-          Secretaria Estadual da Fazenda (SEFAZ)
-
-        Órgãos de Classe (quando aplicável) ex.: OAB, CRM, CRV, CREA
+    EXCLUSÕES OBRIGATÓRIAS:
+    - MEI (Microempreendedor Individual)
+    - Terceiro setor (ONGs, associações, fundações)
 
     Retorne APENAS um JSON válido no formato:
+    {
+      "prospects": [
         {
-          "prospects": [
-            {
-              "empresa": "Nome da Empresa S.A.",
-              "setor": "Agroindústria - Açúcar e Etanol", 
-              "cnae": "1071-6/00",
-              "regime_tributario": "Lucro Real",
-              "contato_decisor": "João Silva (CFO)",
-              "telefone": "(62) 3321-8200",
-              "email": "joao.silva@empresa.com.br",
-              "website": "empresa.com.br",
-              "gancho_prospeccao": "Investimentos recentes em expansão, problemas fiscais"
-            }
-          ]
-        }`;
+          "empresa": "Nome da Empresa Ltda",
+          "setor": "Comércio Varejista", 
+          "cnae": "4712-1/00",
+          "regime_tributario": "Simples Nacional",
+          "contato_decisor": "Maria Silva (Sócia)",
+          "telefone": "(11) 3456-7890",
+          "email": "maria.silva@empresa.com.br",
+          "website": "empresa.com.br",
+          "gancho_prospeccao": "Custos elevados com Pix e TEDs, pode economizar com conta PJ gratuita C6 Bank"
+        }
+      ]
+    }`;
 
     console.log('Calling Google Gemini API...');
     
